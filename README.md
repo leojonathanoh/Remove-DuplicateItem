@@ -1,8 +1,8 @@
 # rmdups - Documentation
 ## Description
-A simple Powershell script that can be used to list / move / remove duplicate files on Windows systems.
+A simple Powershell script that can be used to list / move / remove duplicate files (contained in the same folder) on Windows systems. 
 - It performs a search of a folder and all subfolders, finding duplicate files within each folder, and depending on the mode, can either list, move, or delete (to recycle bin) those duplicate files.
-- It is not meant to be used on a system-wide scale to remove duplicate files distributed in various folders. (It cannot!)
+- It is not meant to be used on a system-wide scale to remove duplicate files distributed in various folders. (It cannot!). To do so use <a href="https://github.com/theohbrothers/rmdups-systemwide">this instead</a>.
 
 ## Features:
 - Searches through a folder and all decendent folders (i.e. subfolders) for duplicates that exist WITHIN a folder. 
