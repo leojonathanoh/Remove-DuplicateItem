@@ -35,7 +35,7 @@ A simple Powershell script that can be used to list / move / remove duplicate fi
 
 ## FAQ
 What is a duplicate file?:
-Has separate file[s] with:
+- Has separate file[s] with:
 	- Same container folder
 	- Same file contents (file hash)
 	- Same file size
