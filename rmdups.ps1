@@ -61,16 +61,26 @@ if(!$(Test-Path $startingdir -PathType Container)) {
 Write-Host "Checking configuration options...Configuation options are valid: `n`t`$startingdir: $startingdir `n`t`$dupdir: $dupdir `n`t`$mode:$mode `n`t`$ouput: $output `n`t`$debug: $debug `n" -ForegroundColor Green
 
 # Begin prompts to user to confirm
-Write-Host "Are you sure you want to run the script? Press x to exit the script now" -ForegroundColor Yellow
+Write-Host "Are you sure you want to run the script?" -ForegroundColor Yellow
+if($mode -eq 2) { Write-Host "`tNOTE: You have configured the script to delete files to the recycle bin." -ForegroundColor Yellow} 
+Write-Host "Press x to exit the script now. Press ENTER to continue." -ForegroundColor Yellow
 $continue = Read-Host; If ($continue -eq "x" -or $continue -eq "X") {exit}
-Write-Host "Are you absolutely sure you want to run the script? Press x to exit the script now" -ForegroundColor Yellow
-$continue = Read-Host; If ($continue -eq "x" -or $continue -eq "X") {exit}
-Write-Host "`n[Looking for duplicates...]`n" $cd
 
-# recursively get only directories (i.e. directories and sub-directories and sub-sub-directories). store in array.
+# recursively get only directories (i.e. directories and sub-directories and sub-sub-directories etc.)
+Write-Host "`n[Retrieving all folders and sub-folders in $startingdir ...]" -ForegroundColor Cyan
 $containers = @( Get-Item -Path $startingdir | ? {$_.psIscontainer} )
 $containers += Get-ChildItem -Directory -Path $startingdir -Recurse -Exclude $dupdir #| ? {$_.psIscontainer}  # exclude $dupdirs
 #if($debug){echo $containers}
+
+Write-Host "`n[Calculating files' hashes ... this might take some time ...]" -ForegroundColor Cyan
+$files_hashes = @{}
+# get md5 hashes for all files
+foreach($f in $files) {
+    $md5 = Get-FileHash $f.PSPath -Algorithm MD5 # md5 hash of this file
+    $md5 = $md5.Hash 
+    $files_hashes.Add($f, $md5)
+}
+if($debug){$str = $files_hashes | Out-String ; Write-Host $str}
 
 # For each directory, do
 $containers | ForEach-Object {
@@ -93,20 +103,15 @@ $containers | ForEach-Object {
 
         # reset stores, and get md5 for this file.
         $dups_hash = @{}; # to store matches against this file. format: dupObj => thisObj
-        $f_md5 = Get-FileHash $f.PSPath -Algorithm MD5 # md5 hash of this file
+        $f_md5 = $files_hashes.($f)
         
         # against this file, search through all files for dups
 		:iloop foreach($_ in $files) {          
 			# skip over dups alrdy stored in hash
 		    if($cd_filesmapping.ContainsKey($_)) {if($debug){Write-Host "`t>Skipping(iloop)......." $_} continue iloop}
             
-            $_md5 = 0; # md5 of other file
-            # avoid recalculating md5 for same file
-            if ($f -eq $_) { 
-                $_md5 = $f_md5
-            }else {
-                $_md5 = Get-FileHash $_.PSPath -Algorithm MD5 # md5 hash of other file
-            }
+			  # get md5 for file to be compared with
+            $_md5 = $files_hashes.($_)
             if($debug){Write-Host " - f.Name:" $f.Name "`t _Name" $_.Name}
             if($debug){Write-Host " - f.BaseName:" $f.BaseName "`t _BaseName" $_.BaseName}
             if($debug){Write-Host " - f md5:" $f_md5.Hash "`t _md5:" $_md5.Hash}
@@ -145,7 +150,7 @@ $containers | ForEach-Object {
 			if($debug){Write-Host ">key: " $_.key "key length: $len" }
 			if($len -lt $len_shortest) {
 				$len_shortest = $len
-				$f_shortestName = $_.Key.ToString()
+				$f_shortestName = $_.Key
 				if($debug){Write-Host "(current) shortest string:" $len_shortest }
 			}
 		}
@@ -168,18 +173,17 @@ $containers | ForEach-Object {
 		if($debug){echo $cd_filesmapping}
     }
 
-    Write-Host "[Duplicates found in] " $cd
-
     if($mode -eq 0) {
-        Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------"
+        Write-Host "`n[Mode: $mode - Listing duplicate files, and their original file] `n`tFolder: $cd" -ForegroundColor Cyan 
         $cd_filesmapping.GetEnumerator() | % {
             if($_.key.ToString() -ne $_.value.ToString()) { # exclude the original which has key==value
-                $j++
-                Write-Host "`t" $_.key "`t`t`t`t`t"  $_.value 
+               $j++
+               if($j -eq 1) { Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------" }
+               Write-Host "`t" $_.key "`t`t`t`t`t"  $_.value 
             }
         }
     }elseif($mode -eq 1) {
-        
+        Write-Host "`n[Mode: $mode - Moving duplicate files to $dupdir, leaving intact original file] `n`tFolder: $cd" -ForegroundColor Cyan
         # create dup directory 
         $duppath = $cd + "\$dupdir"
         if(!$(Test-Path $duppath -PathType Container)) {
@@ -196,26 +200,35 @@ $containers | ForEach-Object {
             }
         }   
     }elseif($mode -eq 2) {
+        Write-Host "[Mode: $mode - Deleting duplicate files, keeping original file(shortest name among them)] " -ForegroundColor Cyan 
         # delete files to recycle bin
         $cd_filesmapping.GetEnumerator() | % { 
             
             if($_.key.ToString() -ne $_.value.ToString()) { # exclude the original which has key==value
                 $j++
+				if($j -eq 1) { Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------" }
                 $f = $_.key
+				$v = $_.value
                 $path = $cd + "\" + $f
                 $shell = new-object -comobject "Shell.Application"
                 $item = $shell.Namespace(0).ParseName("$path")
                 $item.InvokeVerb("delete")
+				
+				Write-Host "`tDeleting:`t" $f.FullName "`t`t`t`t`tOriginal:`t"   $v.FullName
                 # dont use Remove-item, it permanently deletes
                 #Remove-item $falses
             }
         }
-
+        if($j) { Write-Host "`tDeleting duplicates successful. Original files are left intact." -ForegroundColor Green }
     }
-	
+
+    # tell user no dups found in this folder folder
+	if($j -eq 0) { Write-Host "`tNo duplicates in: $cd" -ForegroundColor Green }
+
     # show summary only if dups exist
     $t = $files.Count # total file count within this directory
-    if ($j) {Write-Host " -summary: non-dup count:$($t-$j) vs dup count:$j vs total: $t"}
+    if ($j) { Write-Host " ---------- `n| summary | `n ---------- `n - original file count:$($t-$j) `n - duplicate file count:$j `n - total files: $t" -ForegroundColor Green }
+
     
  }
 
@@ -226,4 +239,4 @@ Stop-Transcript
 
 pause
 
-
+#>
