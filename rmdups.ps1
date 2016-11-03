@@ -92,31 +92,35 @@ $containers | ForEach-Object {
 		if($debug){Write-Host "`n[Looking in] -" $cd}
 
         # reset stores, and get md5 for this file.
-        $hash_dups = @{}; # to store matches against this file. format: dupObj => thisObj
-        $i=0 # against this file, number of matches 
+        $dups_hash = @{}; # to store matches against this file. format: dupObj => thisObj
         $f_md5 = Get-FileHash $f.PSPath -Algorithm MD5 # md5 hash of this file
         
         # against this file, search through all files for dups
 		:iloop foreach($_ in $files) {          
 			# skip over dups alrdy stored in hash
 		    if($cd_filesmapping.ContainsKey($_)) {if($debug){Write-Host "`t>Skipping(iloop)......." $_} continue iloop}
-
-            $_md5 = Get-FileHash $_.PSPath -Algorithm MD5 # md5 hash of other file
+            
+            $_md5 = 0; # md5 of other file
+            # avoid recalculating md5 for same file
+            if ($f -eq $_) { 
+                $_md5 = $f_md5
+            }else {
+                $_md5 = Get-FileHash $_.PSPath -Algorithm MD5 # md5 hash of other file
+            }
             if($debug){Write-Host " - f.Name:" $f.Name "`t _Name" $_.Name}
             if($debug){Write-Host " - f.BaseName:" $f.BaseName "`t _BaseName" $_.BaseName}
             if($debug){Write-Host " - f md5:" $f_md5.Hash "`t _md5:" $_md5.Hash}
 
-            # dup is found when: matches on size, and matches on md5 hash.
+            # a dup is: same file contents (hash), same size, within the same container folder.
 			if(($_.Length -eq $f.Length) -and ($f_md5.Hash -eq $_md5.Hash) ) 
 			{
-				$i++;
 				# store this first dup in hash
-				if(!$hash_dups.ContainsKey($f)) {
-					$hash_dups.add($_, $f ); # format: dupObj(key) => thisObj(value)
+				if(!$dups_hash.ContainsKey($f)) {
+					$dups_hash.add($_, $f ); # format: dupObj(key) => thisObj(value)
 				}
 				# store subsequent dups in hash
-				if(!$hash_dups.ContainsKey($_)) {
-					$hash_dups.add($_, $f ); # format: dupObj(key) => thisObj(value)
+				if(!$dups_hash.ContainsKey($_)) {
+					$dups_hash.add($_, $f ); # format: dupObj(key) => thisObj(value)
 				}
 				if($debug){Write-Host "`t> Match found. File comparison: `n`t`tname: $f" "`tlast modified:" $f.LastWriteTime "`tsize:" $f.Length " vs `n`t`tname:" $_ "`t`tlast modified:" $_.LastWriteTime "`tsize:" $_.Length;}
 			 }else {
@@ -124,8 +128,8 @@ $containers | ForEach-Object {
 			 }
 		}
 
-		# if file matched itself only (i.e. 1 match) - no duplicates for this file. add to cd_hash to mark as done, and continue
-		if($i -eq 1) { 
+		# if only 1 match found, file matched itself: no duplicates for this file. add to cd_filesmapping to mark as done, and continue with next file
+		if($dups_hash.Count -eq 1) { 
 			$cd_filesmapping.add($f, $f ); # format: thisObj(key) => thisObj(value)
 			if($debug){Write-Host "`t>No dups, Skipping(oloop)......." $_} 
 		    if($debug){echo "-----#g----"}
@@ -136,7 +140,7 @@ $containers | ForEach-Object {
 		# among dups, find the file with shortest file name. This will be the main/original file.
 		$f_shortestName = $f.Name; 
 		$len_shortest = $f.Name.Length;
-		$hash_dups.GetEnumerator() | % { 
+		$dups_hash.GetEnumerator() | % { 
 			$len = $_.Key.ToString().Length
 			if($debug){Write-Host ">key: " $_.key "key length: $len" }
 			if($len -lt $len_shortest) {
@@ -148,18 +152,18 @@ $containers | ForEach-Object {
 
         # debug
 		if($debug){echo "----#h(b4)-----"}
-		if($debug){echo $hash_dups}
+		if($debug){echo $dups_hash}
 		if($debug){echo "----#h(af)-----"}
         
         # set main/original file name as value to all dups (All dups are mapped to the main/original file with the shortest name). then add them to cd_hash to mark as done
-		foreach($key in $($hash_dups.keys)){
-			$hash_dups[$key] = $f_shortestName
+		foreach($key in $($dups_hash.keys)){
+			$dups_hash[$key] = $f_shortestName
 			# do not add global
-			$cd_filesmapping.Add($key, $hash_dups[$key]) # format: dupObj(key) => oriObj(value)
+			$cd_filesmapping.Add($key, $dups_hash[$key]) # format: dupObj(key) => oriObj(value)
 		}
 		
         # debug
-        if($debug){echo $hash_dups}
+        if($debug){echo $dups_hash}
 		if($debug){echo "-----#cd----"}
 		if($debug){echo $cd_filesmapping}
     }

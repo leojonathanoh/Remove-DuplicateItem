@@ -11,8 +11,8 @@ A simple Powershell script that can be used to list / move / remove duplicate fi
 
 - Choose a mode for one of the following:
 	- list duplicates 
-	- move duplicates to a newly created folder within the folder where duplicates exist
-	- delete duplicates to the recycle bin
+	- move duplicates to a newly created folder within the folder where duplicates exist, leaving the original file intact (shortest named file)
+	- delete duplicates to the recycle bin, leaving the original file intact (shortest named file)
 - Logs the entire search session (output.txt) to the script's directory for you to review any duplicates. 
 
 ## Features absent:
@@ -35,11 +35,11 @@ A simple Powershell script that can be used to list / move / remove duplicate fi
 
 ## FAQ
 What is a duplicate file?:
-- Same file contents (file hash)
-- Same file size
-- Same containing folder
-- Might have completely different file name
-
+Has separate file[s] with:
+	- Same container folder
+	- Same file contents (file hash)
+	- Same file size
+	
 What is the original file?:
 - A duplicate file but with the shortest name among all duplicates found.
 
