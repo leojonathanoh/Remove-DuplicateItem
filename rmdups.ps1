@@ -217,7 +217,7 @@ $files = Get-ChildItem -Path $cd -File | sort Extension
 $j=0 # total dup count within this directory
 if($mode -eq 0) {
 	$filesmapping.GetEnumerator() | % {
-		if($_.key.ToString() -ne $_.value.ToString()) { # exclude the original which has key==value
+		if($_.key.FullName -ne $_.value.FullName) { # exclude the original which has key==value
 			$j++
 			if ($j -eq 1) { Write-Host "`n[Mode: $mode - Listing duplicate files, and their original file]" -ForegroundColor Cyan }
 			if ($j -eq 1) { Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------" }
@@ -227,7 +227,7 @@ if($mode -eq 0) {
 }elseif($mode -eq 1) {
 	# delete files to recycle bin
 	$filesmapping.GetEnumerator() | % { 
-		if($_.key.ToString() -ne $_.value.ToString()) { # exclude the original which has key==value
+		if($_.key.FullName -ne $_.value.FullName) { # exclude the original which has key==value
 			$j++
 			if($j -eq 1) { Write-Host "[Mode: $mode - Deleting duplicate files, keeping original file(shortest name among them)] " -ForegroundColor Cyan }
 			if($j -eq 1) { Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------" }
@@ -246,7 +246,7 @@ if($mode -eq 0) {
 	if($j) { Write-Host "`tDeleting duplicates successful. Original files are left intact." -ForegroundColor Green }
 }elseif($mode -eq 2) {
 	$filesmapping.GetEnumerator() | % { 
-		if($_.key.ToString() -ne $_.value.ToString()) { # exclude the original which has key==value
+		if($_.key.FullName -ne $_.value.FullName) { # exclude the original which has key==value
 			if($j -eq 1) { Write-Host "`n[Mode: $mode - Moving duplicate files to $dupdir, leaving intact original file] `n`tFolder: $cd" -ForegroundColor Cyan }
 			$j++
 			$f = $_.key;
