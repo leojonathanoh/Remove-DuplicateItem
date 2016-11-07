@@ -11,7 +11,8 @@ A simple Powershell script that can be used to list / move / remove duplicate fi
 	- list duplicates 
 	- move duplicates to a newly created folder within the folder where duplicates exist, leaving the original file intact (shortest named file)
 	- delete duplicates to the recycle bin, leaving the original file intact (shortest named file)
-- Logs the entire search session (output.txt) to the script's directory for you to review any duplicates. 
+- Outputs all duplicates to a csv file (duplicates.csv) for your review.
+- Logs the entire console session (output.txt) to the script's directory for you to review any duplicates. 
 
 ## Requirements:
 - Powershell v4
@@ -21,7 +22,7 @@ A simple Powershell script that can be used to list / move / remove duplicate fi
 ## Installation/usage:
 - Open the <code>rmdups.ps1</code> in your favourite text editor and configure the script settings at the top of the script (instructions are included).
 - Right click on the script in explorer and select <code>Run with Powershell</code>. (should be present on Windows 7 and up)
-- Alternatively, open command prompt, and run <code>Powershell .\rmdups.ps1</code>
+- Alternatively, open command prompt in the script directory, and run <code>Powershell .\rmdups.ps1</code>
 
 ## NOTE:
 - By default, script directory (where you run the script) needs <b>write permission</b> for session logging (output.txt). If you prefer not to, turn off session logging in script configuration.
