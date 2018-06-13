@@ -1,11 +1,12 @@
 ############### configure script settings ##########
  # Absolute path to directory where duplicates might exist. May contain trailing slash. Folders paths only.
- $startingdir = "D:\duplicatesfolder" 
+$startingdir = "D:\duplicatesfolder" 
 
 # Mode: action to take for duplicates found
-# 0 - List duplicates only. will not move or delete duplicates.
-# 1 - Delete files to recycle bin.
-# 2 - Move duped files to $dupdir that will be created.  
+# 0 - List only.
+# 1 - Delete permanently.
+# 2 - Delete to recycle bin (Only on Windows systems).
+# 3 - Move to $dupdir that will be created.  
 # Default: 0
 $mode = 0
 
@@ -147,31 +148,44 @@ $output_csv = ''
 					Write-Host "`t$($_.FullName)`t`t`t`t`t$($duplicates[0].FullName)"  
 				}
 			}
-		}elseif($mode -eq 1) {
-			Write-Host "Mode: $mode - Deleting duplicate files, keeping original file(shortest name among them) ..." -ForegroundColor Cyan
+		}elseif($mode -eq 1 -$mode -eq 2) {
+			if ($mode -eq 1) {
+				Write-Host "Mode: $mode - Deleting duplicate files to recycle bin, keeping original file(shortest name among them) ..." -ForegroundColor Cyan
+			}elseif ($mode -eq 2) {
+				if ($env:OS -notmatch 'Windows_NT') {
+					Write-Warning "The operation is not supported on non-Windows systems."
+					return
+				}
+			}
 			Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------"
 
-			# Delete files to recycle bin
+			
 			$hashes_duplicates.GetEnumerator() | ForEach-Object {
 				$duplicates = $_.Value
 				$duplicates[1..$($duplicates.Count)] | ForEach-Object {
 					$duplicateFile = $_
 					$originalFile = $duplicates[0]
 
-					# This method does not prompt the user 
-					Add-Type -AssemblyName Microsoft.VisualBasic
-					[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($duplicateFile.FullName,'OnlyErrorDialogs','SendToRecycleBin')
+					if ($mode -eq 1) {
+						# Delete to recycle bin
 
-					# No longer using this method because each delete will prompt the user.
-					#$shell = New-Object -comobject "Shell.Application"
-					#$item = $shell.Namespace(0).ParseName($duplicateFile.FullName)
-					#$item.InvokeVerb("delete")
+						# This method does not prompt the user 
+						Add-Type -AssemblyName Microsoft.VisualBasic
+						[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($duplicateFile.FullName,'OnlyErrorDialogs','SendToRecycleBin')
 
-					# Dont use Remove-item, it permanently deletes
-					#Remove-item $duplicateFile.FullName -Force
-
-					Write-Host "`tDeleting:`t$($duplicateFile.FullName)`t`t`t`t`tOriginal:`t$($originalFile.FullName)"
-
+						# No longer using this method because each delete will prompt the user.
+						#$shell = New-Object -comobject "Shell.Application"
+						#$item = $shell.Namespace(0).ParseName($duplicateFile.FullName)
+						#$item.InvokeVerb("delete")
+					}elseif ($mode -eq 2) {
+						# Permanently delete
+						try {
+							Write-Host "`tDeleting:`t$($duplicateFile.FullName)`t`t`t`t`tOriginal:`t$($originalFile.FullName)"
+							Remove-item $duplicateFile.FullName -Force -ErrorAction Stop
+						}catch {
+							Write-Warning "Could not delete $($duplicateFile.FullName). Reason $($_.Exception.Message)"
+						}
+					}
 				}
 			}
 			Write-Host "`tDeleting duplicates successful. Original files are left intact." -ForegroundColor Green
