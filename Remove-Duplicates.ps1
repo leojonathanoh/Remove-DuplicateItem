@@ -1,14 +1,14 @@
 ############### configure script settings ##########
  # Absolute path to directory where duplicates might exist. May contain trailing slash. Folders paths only.
-$startingdir = "D:\duplicatesfolder" 
+ $startingdir = "D:\duplicatesfolder" 
 
-# Mode: action to take for duplicates found
-# 0 - List only.
-# 1 - Delete permanently.
-# 2 - Delete to recycle bin (Only on Windows systems).
-# 3 - Move to $dupdir that will be created.  
-# Default: 0
-$mode = 0
+ # Mode: action to take for duplicates found
+ # 0 - List only.
+ # 1 - Delete permanently.
+ # 2 - Delete to recycle bin (Only on Windows systems).
+ # 3 - Move to $dupdir that will be created.  
+ # Default: 0
+ $mode = 0
 
 # The name of the directory name where duplicates will be moved. Cannot contain the following characters:/ \ : * ? < > |
 # NOTE: Applies only to mode 2. Edit between the quotes
@@ -97,7 +97,7 @@ $output_csv = ''
 & { Get-Item $startingdir; Get-ChildItem -Directory -Path $startingdir -Recurse -Exclude $dupdir } | ForEach-Object {
 	$container = $_
 	$cd = $_.FullName # Current directory's full path
-	Write-Host "`nFolder: $cd" -ForegroundColor Cyan
+	Write-Host "`n********************************************************************************`nFolder: $cd" -ForegroundColor Cyan
 	
 	$f = 0 # File count
 	$hashes_unique = @{} # format: md5str => FileInfo
@@ -134,7 +134,7 @@ $output_csv = ''
 		Write-Host "`tNo duplicates in: $cd" -ForegroundColor Green 
 	}else {
 		# Show summary only if dups exist
-		if($d) { Write-Host "- original file count:$($f-$d) `n- duplicate file count:$d `n- total files: $f" -ForegroundColor Green }
+		if($d) { Write-Host "Total files count: $f, Original files count: $($f-$d), Duplicate files count: $d" -ForegroundColor Green }
 
 		# Do the Task based on mode
 		if($mode -eq 0) {
@@ -148,7 +148,7 @@ $output_csv = ''
 					Write-Host "`t$($_.FullName)`t`t`t`t`t$($duplicates[0].FullName)"  
 				}
 			}
-		}elseif($mode -eq 1 -$mode -eq 2) {
+		}elseif($mode -eq 1 -or $mode -eq 2) {
 			if ($mode -eq 1) {
 				Write-Host "Mode: $mode - Deleting duplicate files to recycle bin, keeping original file(shortest name among them) ..." -ForegroundColor Cyan
 			}elseif ($mode -eq 2) {
@@ -166,6 +166,7 @@ $output_csv = ''
 					$duplicateFile = $_
 					$originalFile = $duplicates[0]
 
+					Write-Host "`tDeleting:`t$($duplicateFile.FullName)`t`t`t`t`tOriginal:`t$($originalFile.FullName)"
 					if ($mode -eq 1) {
 						# Delete to recycle bin
 
@@ -180,7 +181,6 @@ $output_csv = ''
 					}elseif ($mode -eq 2) {
 						# Permanently delete
 						try {
-							Write-Host "`tDeleting:`t$($duplicateFile.FullName)`t`t`t`t`tOriginal:`t$($originalFile.FullName)"
 							Remove-item $duplicateFile.FullName -Force -ErrorAction Stop
 						}catch {
 							Write-Warning "Could not delete $($duplicateFile.FullName). Reason $($_.Exception.Message)"
