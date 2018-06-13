@@ -19,7 +19,7 @@ $dupdir = "!dup"
 # 0 - Off
 # 1 - On
 # Default: 1
-$mode_output_cli = 1
+$mode_output_cli = 0
 
 # File name of the console transcript. File will be created in same directory as powershell script.
 # NOTE: Edit between the quotes. May not contain characters: / \ : * ? < > |
