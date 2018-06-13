@@ -1,11 +1,11 @@
 ############### configure script settings ##########
 # Absolute path to directory where duplicates might exist. May contain trailing slash. Folders paths only.
-$startingdir = "D:\duplicatesfolder"
+$startingDir = "D:\duplicatesfolder"
 
 # Scope: scope to search for duplicates
 # May be 'within-folder' or 'across-folder'
-# 'within-folder' - duplicates will be located among all files found within each folder node starting from $startingdir
-# 'across-folder' - 'across-folder', duplicates will be located among all files found across all folder nodes starting from $startingdir
+# 'within-folder' - duplicates will be located among all files found within each folder node starting from $startingDir
+# 'across-folder' - 'across-folder', duplicates will be located among all files found across all folder nodes starting from $startingDir
 $scope = 'within-folder'
 
 # Mode: action to take for duplicates found
@@ -17,7 +17,7 @@ $scope = 'within-folder'
 $mode = 0
 
 # The name of the directory name where duplicates will be moved. Cannot contain the following characters:/ \ : * ? < > |
-# If $scope is 1 (across-folder), this directory will be created in the $startingdir directory
+# If $scope is 1 (across-folder), this directory will be created in the $startingDir directory
 # If $scope is 0 (within-folder), this directory will be created each searched child directory
 # NOTE: Applies only to mode 2. Edit between the quotes
 # Default: "!dup"
@@ -59,33 +59,29 @@ if ( Test-Path $devFile ) {
 	. $devFile
 }
 
-# Instantiate the duplicates Object
-$duplicatesObj = @{}
-
 # Check parameters' argument validity
 try {
 	$ErrorActionPreference = "Stop"
 
-	if ($startingdir -match '[\*\"\?\<\>\|]'){
-		throw "Invalid starting directory! $startingdir may not contain characters: : * ? < > | "
-	}elseif(!$(Test-Path $startingdir -PathType Container)) {
-		throw "Invalid starting directory! $startingdir must be an existing folder. "
-	}elseif( !(($scope -eq 'within-folder') -or ($scope -eq 'across-folder')) ) { 
-		throw "Invalid scope! Use 'within-folder' or 'across-folder'."
-	}elseif ( ($dupdir -match '[\/\\\:\*\"\?\<\>\|]') -and ($mode -eq 2) ){
-	}elseif(($mode -gt 2) -or ($mode -lt 0)) { 
+	if ($startingDir -match '[\*\"\?\<\>\|]'){
+		throw "Invalid starting directory! $startingDir may not contain characters: : * ? < > | "
+	}elseif (! $(Test-Path $startingDir -PathType Container) ) {
+		throw "Invalid starting directory! $startingDir must be an existing folder. "
+	}elseif (! (($scope -eq 'within-folder') -or ($scope -eq 'across-folder')) ) { 
+		throw "Invalid scope $scope! Use 'within-folder' or 'across-folder'."
+	}elseif ( ($mode -gt 3) -or ($mode -lt 0) ) { 
 		throw "Invalid mode! Use integer values from 0 to 2."
 	}elseif ( ($dupdir -match '[\/\\\:\*\"\?\<\>\|]') -and ($mode -eq 2) ){
 		throw "Invalid duplicates directory! $dupdir may not contain characters: / \ : * ? < > | "
-	}elseif(($mode_output_cli -gt 1) -or ($mode_output_cli -lt 0)) { 
+	}elseif ( ($mode_output_cli -gt 1) -or ($mode_output_cli -lt 0) ) { 
 		throw "Invalid console output mode! Use integer values from 0 to 1."
-	}elseif($output_cli_file -match '[\/\\\:\*\"\?\<\>\|]') { 
+	}elseif ($output_cli_file -match '[\/\\\:\*\"\?\<\>\|]') { 
 		throw "Invalid output file name of console session! May not contain characters: / \ : * ? < > | "
-	}elseif(($mode_output_duplicates -gt 1) -or ($mode_output_duplicates -lt 0)) { 
+	}elseif ( ($mode_output_duplicates -gt 1) -or ($mode_output_duplicates -lt 0) ) { 
 		throw "Invalid duplicates output mode! Use integer values from 0 to 1."
-	}elseif($output_dup_file -match '[\/\\\:\*\"\?\<\>\|]') { 
+	}elseif ($output_dup_file -match '[\/\\\:\*\"\?\<\>\|]') { 
 		throw "Invalid output file name of duplicates! May not contain characters: / \ : * ? < > | "
-	}elseif(($debug -gt 1) -or ($debug -lt 0)) { 
+	}elseif ( ($debug -gt 1) -or ($debug -lt 0) ) { 
 		throw "Invalid debug mode! Use integer values from 0 to 1."
 	}
 
@@ -95,7 +91,7 @@ try {
 	# Check for write permissions in script directory
 	if ($mode_output_cli -eq 1) {
 		# check for write permissions 
-		Try { [io.file]::OpenWrite($output_cli_file).close() }
+		Try { [io.file]::OpenWrite((Join-Path $PSScriptRoot $output_cli_file)).close() }
 		Catch { Write-Warning "Script directory has to be writeable to output the cli session!" }
 	}
 
@@ -104,20 +100,27 @@ try {
 		Start-Transcript -path (Join-Path $PSScriptRoot $output_cli_file) -append
 	}
 
-	if ($scope -eq 'within-folder') {
-		$searchDirsScriptblock = { Get-Item $startingdir; Get-ChildItem -Directory -Path $startingdir -Recurse -Exclude $dupdir }
-	}else {
-		$searchDirsScriptblock = { Get-Item $startingdir; }
+	# Instantiate the duplicates Object
+	$searchObj = @{
+		startingDir = $startingDir
+		scope = $scope
+		results = @{}
 	}
 
+	if ($scope -eq 'within-folder') {
+		$searchDirsScriptblock = { Get-Item $startingDir; Get-ChildItem -Directory -Path $startingDir -Recurse -Exclude $dupdir }
+	}else {
+		$searchDirsScriptblock = { Get-Item $startingDir; }
+	}
+
+	Write-Host "Searching for all duplicates starting from $startingDir ..." -ForegroundColor Cyan
 	& $searchDirsScriptblock | ForEach-Object {
 		$container = $_
-		$cd = $_.FullName # Current directory's full path
-		Write-Host "`n********************************************************************************`nFolder: $cd" -ForegroundColor Cyan
 		
 		$fileSearchParams = @{
 			Path = $container
 			File = $true
+			ReadOnly = $true
 		}
 		if ($scope -eq 'within-folder') {
 			$fileSearchParams['Recurse'] = $false 
@@ -151,46 +154,74 @@ try {
 			$hashes_duplicates[$key] = $hashes_duplicates[$key] | Sort-Object { $_.Name.Length }
 		}
 
-		# Calculate duplicates count (excludes original file)
-		$d = 0
-		$hashes_duplicates.GetEnumerator() | ForEach-Object { $d += $_.Value.Count - 1; }
+		# Populate the duplicates object, Collect basic content for the csv
+		$hashes_duplicates.GetEnumerator() | ForEach-Object {
+			$md5 = $_.Key
+			$duplicates = $_.Value
+			$originalFile = $duplicates[0]
+			$duplicateFiles = $duplicates[1..$($duplicates.Count - 1)]
 
-		# Tell user no dups found in this folder 
-		if($d -eq 0) { 
-			Write-Host "`tNo duplicates in: $cd" -ForegroundColor Green 
-		}else {
-			# Show summary only if dups exist
-			if($d) { Write-Host "Total files count: $f, Original files count: $($f-$d), Duplicate files count: $d" -ForegroundColor Green }
+			# Populate the duplicates object (for later serialization, if needed)
+			$searchObj['results'][$originalFile.FullName] = @{
+				md5 = $md5
+				originalFile = $originalFile
+				duplicateFiles  = $duplicateFiles
+			}
+		}
+	}
+	Write-Host "Search for all duplicates successful." -ForegroundColor Cyan
 
-			# Do the Task based on mode
-			if($mode -eq 0) {
-				Write-Host "Mode: $mode - Listing duplicate files, and their original file ..." -ForegroundColor Green
-				Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------"
+	# Perform an action on the duplicates: List; Delete to Recycle Bin (Windows only); Delete Permanently; Move to a specified directory
+	if ($mode -is [int]) {
+		$scope = $searchObj['scope']
+		$results = $searchObj['results']
+		$scopeDir = $searchObj['startingDir']
 
-				# List duplicates
-				$hashes_duplicates.GetEnumerator() | ForEach-Object {
-					$duplicates = $_.Value
-					$duplicates[1..$($duplicates.Count - 1)] | ForEach-Object {
-						Write-Host "`t$($_.FullName)`t`t`t`t`t$($duplicates[0].FullName)"  
-					}
-				}
-			}elseif($mode -eq 1 -or $mode -eq 2) {
-				if ($mode -eq 1) {
-					Write-Host "Mode: $mode - Deleting duplicate files to recycle bin, keeping original file(shortest name among them) ..." -ForegroundColor Cyan
-				}elseif ($mode -eq 2) {
-					if ($env:OS -notmatch 'Windows_NT') {
-						Write-Warning "The operation is not supported on non-Windows systems."
-						return
-					}
-				}
-				Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------"
+		$results.GetEnumerator() | % {
+			if ($scope -eq 'within-folder') {
+				$scopeDir = $originalFile.Directory.FullName
+			}
+			Write-Host "`n********************************************************************************`nFolder: $scopeDir" -ForegroundColor Cyan		
+	
+			$result = $_.Value
+			$md5 = $result['md5']
+			$originalFile = $result['originalFile']
+			$duplicateFiles = $result['duplicateFiles']
 
-				$hashes_duplicates.GetEnumerator() | ForEach-Object {
-					$duplicates = $_.Value
-					$duplicates[1..$($duplicates.Count)] | ForEach-Object {
+			# Calculate duplicates count (excludes original file)
+			$d = $duplicateFiles.Count
+
+			# Tell user no dups found in this folder 
+			if($d -eq 0) { 
+				Write-Host "`tNo duplicates in: $scopeDir" -ForegroundColor Green 
+			}else {
+				# Show summary only if dups exist
+				if($d) { Write-Host "Total files count: $f, Original files count: $($f-$d), Duplicate files count: $d" -ForegroundColor Green }
+
+				# Do the Task based on mode
+				if($mode -eq 0) {
+					Write-Host "Mode: $mode - Listing duplicate files, and their original file ..." -ForegroundColor Green
+					Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------"
+
+					# List duplicates
+					$duplicateFiles | ForEach-Object {
 						$duplicateFile = $_
-						$originalFile = $duplicates[0]
+						Write-Host "`t$($duplicateFile.FullName)`t`t`t`t`t$($originalFile.FullName)"  
+					}
+				}elseif($mode -eq 1 -or $mode -eq 2) {
+					if ($mode -eq 1) {
+						Write-Host "Mode: $mode - Deleting duplicate files to recycle bin, keeping original file ..." -ForegroundColor Green
+					}elseif ($mode -eq 2) {
+						Write-Host "Mode: $mode - Deleting duplicate files permanently, keeping original file ..." -ForegroundColor Green
+						if ($env:OS -notmatch 'Windows_NT') {
+							Write-Warning "The operation is not supported on non-Windows systems."
+							return
+						}
+					}
+					Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------"
 
+					$duplicateFiles | ForEach-Object {
+						$duplicateFile = $_
 						Write-Host "`tDeleting:`t$($duplicateFile.FullName)`t`t`t`t`tOriginal:`t$($originalFile.FullName)"
 						if (!$debug) {
 							if ($mode -eq 1) {
@@ -216,17 +247,14 @@ try {
 							}
 						}
 					}
-				}
-				Write-Host "`tDeleting duplicates successful. Original files are left intact." -ForegroundColor Green
-			}elseif($mode -eq 2) {
-				Write-Host "Mode: $mode - Moving duplicate files to $dupdir, leaving intact original file..." -ForegroundColor Green 
-				$hashes_duplicates.GetEnumerator() | ForEach-Object {
-					$duplicates = $_.Value
-					$duplicates[1..$($duplicates.Count - 1)] | ForEach-Object {
+					Write-Host "Deleting duplicates successful. Original files are left intact." -ForegroundColor Green
+				}elseif($mode -eq 3) {
+					Write-Host "Mode: $mode - Moving duplicate files to $dupdir, leaving intact original file..." -ForegroundColor Green 
+					$duplicateFiles | ForEach-Object {
 						$duplicateFile = $_
-						
+							
 						# Move to a dup directory
-						$destinationDir = Join-Path $cd $dupdir
+						$destinationDir = Join-Path $scopeDir $dupdir
 						$destination = Join-Path $destinationDir $duplicateFile.Name
 						Write-Host "`tMoving dup file from $($duplicateFile.FullName) to $destination" -ForegroundColor Green
 						
@@ -241,39 +269,26 @@ try {
 				}
 			}
 		}
-
-		# Populate the duplicates object, Collect basic content for the csv
-		$hashes_duplicates.GetEnumerator() | ForEach-Object {
-			$md5 = $_.Key
-			$duplicates = $_.Value
-			$originalFile = $duplicates[0]
-			$duplicateFiles = $duplicates[1..$($duplicates.Count - 1)]
-
-			# Populate the duplicates object (for later serialization, if needed)
-			$duplicatesObj[$originalFile.FullName] = @{
-				md5 = $md5
-				originalFile = $originalFile
-				duplicateFiles  = $duplicateFiles
-			}
-		}
 	}
 
 	# Export duplicates .json or .csv
 	if ($mode_output_duplicates -eq 1) {
+		$results = $searchObj['results']
+
 		$exportFilePath = Join-Path $PSScriptRoot $output_dup_file
 		Write-Host "Exporting duplicates file to $exportFilePath" -ForegroundColor Cyan
 
 		if ($output_dup_file.Trim() -match '\.json$') {
 			# JSON export
-			$duplicatesObj | ConvertTo-Json -Depth 2 | Out-File $exportFilePath -Encoding utf8
+			$results | ConvertTo-Json -Depth 2 | Out-File $exportFilePath -Encoding utf8
 		}else {
 			# CSV export
 			$output_csv = ''
-			$duplicatesObj.GetEnumerator() | % {
-				$duplicateObj = $_.Value
-				$md5 = $duplicateObj['md5']
-				$originalFile = $duplicateObj['originalFile']
-				$duplicateFiles = $duplicateObj['duplicateFiles']
+			$results.GetEnumerator() | % {
+				$result = $_.Value
+				$md5 = $result['md5']
+				$originalFile = $result['originalFile']
+				$duplicateFiles = $result['duplicateFiles']
 				
 				$duplicateFiles | ForEach-Object {
 					$duplicateFile = $_
@@ -284,7 +299,7 @@ try {
 					$output_csv += "`n`"$($duplicateFile.Directory.FullName)`",`"$($duplicateFile.FullName)`",`"$duplicateFile_size_in_kB`",`"$md5`",`"$($originalFile.Directory.FullName)`",`"$($originalFile.FullName)`",`"$originalFile_size_in_kB`",`"$md5`""
 				}
 			}
-			$output_csv = '"Duplicate File Directory", "Duplicate File","Duplicate File Size","Duplicate File Hash","Original File Directory","Original File","Original File Size","Original File Hash' + $output_csv
+			$output_csv = '"Duplicate File Directory","Duplicate File","Duplicate File Size","Duplicate File Hash","Original File Directory","Original File","Original File Size","Original File Hash"' + $output_csv
 			$output_csv | Out-File $exportFilePath -Encoding utf8
 		}
 	}
@@ -295,4 +310,5 @@ try {
 	}
 }catch {
 	Write-Warning "Stopped due to an error. Reason: $($_.Exception.Message)"
+	throw
 }
