@@ -195,7 +195,7 @@ try {
 						}
 						# Move files
 						Write-Host "`tMoving dup file from $($duplicateFile.FullName) to $destination" -ForegroundColor Green
-						#Move-Item $duplicateFile.FullName $destination
+						Move-Item $duplicateFile.FullName $destination
 					}
 				}
 			}
