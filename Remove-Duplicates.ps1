@@ -49,35 +49,30 @@ Set-Location $scriptDir
 Write-Host "Script directory: $scriptDir" -ForegroundColor Green
 
 # Check parameters' argument validity
-if ($startingdir -match '[\*\"\?\<\>\|]'){
-	Write-Host 'Invalid starting directory! May not contain characters: : * ? < > | ' -ForegroundColor Yellow
-	pause; exit
-}elseif(!$(Test-Path $startingdir -PathType Container)) {
-	Write-Host 'Invalid starting directory! Must be a folder. ' -ForegroundColor Yellow
-	pause; exit
-}elseif(($mode -gt 2) -or ($mode -lt 0)) { 
-	Write-Host "Invalid mode! Use integer values from 0 to 2." -ForegroundColor Yellow
-	pause; exit
-}elseif ( ($dupdir -match '[\/\\\:\*\"\?\<\>\|]') -and ($mode -eq 2) ){
-	Write-Host 'Invalid duplicates directory! May not contain characters: / \ : * ? < > | ' -ForegroundColor Yellow
-	pause; exit
-}elseif(($mode_output_cli -gt 1) -or ($mode_output_cli -lt 0)) { 
-	Write-Host "Invalid console output mode! Use integer values from 0 to 1." -ForegroundColor Yellow
-	pause; exit
-}elseif($output_cli_file -match '[\/\\\:\*\"\?\<\>\|]') { 
-	Write-Host "Invalid output file name of console session! May not contain characters: / \ : * ? < > | " -ForegroundColor Yellow
-	pause; exit
-}elseif(($mode_output_duplicates -gt 1) -or ($mode_output_duplicates -lt 0)) { 
-	Write-Host "Invalid duplicates output mode! Use integer values from 0 to 1." -ForegroundColor Yellow
-	pause; exit
-}elseif($output_dup_file -match '[\/\\\:\*\"\?\<\>\|]') { 
-	Write-Host "Invalid output file name of duplicates! May not contain characters: / \ : * ? < > | " -ForegroundColor Yellow
-	pause; exit
-}elseif(($debug -gt 1) -or ($debug -lt 0)) { 
-	Write-Host "Invalid debug mode! Use integer values from 0 to 1." -ForegroundColor Yellow
-	pause; exit
+try {
+	if ($startingdir -match '[\*\"\?\<\>\|]'){
+		throw 'Invalid starting directory! May not contain characters: : * ? < > | '
+	}elseif(!$(Test-Path $startingdir -PathType Container)) {
+		throw 'Invalid starting directory! Must be a folder. '
+	}elseif(($mode -gt 2) -or ($mode -lt 0)) { 
+		throw "Invalid mode! Use integer values from 0 to 2."
+	}elseif ( ($dupdir -match '[\/\\\:\*\"\?\<\>\|]') -and ($mode -eq 2) ){
+		throw 'Invalid duplicates directory! May not contain characters: / \ : * ? < > | '
+	}elseif(($mode_output_cli -gt 1) -or ($mode_output_cli -lt 0)) { 
+		throw "Invalid console output mode! Use integer values from 0 to 1."
+	}elseif($output_cli_file -match '[\/\\\:\*\"\?\<\>\|]') { 
+		throw "Invalid output file name of console session! May not contain characters: / \ : * ? < > | "
+	}elseif(($mode_output_duplicates -gt 1) -or ($mode_output_duplicates -lt 0)) { 
+		throw "Invalid duplicates output mode! Use integer values from 0 to 1."
+	}elseif($output_dup_file -match '[\/\\\:\*\"\?\<\>\|]') { 
+		throw "Invalid output file name of duplicates! May not contain characters: / \ : * ? < > | "
+	}elseif(($debug -gt 1) -or ($debug -lt 0)) { 
+		throw "Invalid debug mode! Use integer values from 0 to 1."
+	}
+}catch {
+	Write-Warning $_.Exception.Message
+	return
 }
-
 # Check for write permissions in script directory
 if ($mode_output_cli -eq 1) {
 	# check for write permissions 
