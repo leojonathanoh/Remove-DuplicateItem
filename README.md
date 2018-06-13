@@ -1,7 +1,7 @@
-# rmdups - Documentation
+# Remove-Duplicates - Documentation
 A simple Powershell script that can be used to list / move / remove duplicate files (contained in the same folder) on Windows systems. 
 - It performs a search of a folder and all subfolders, finding duplicate files within each folder, and depending on the mode, can either list, move, or delete (to recycle bin) those duplicate files.
-- NOTE: It's duplicate search scope is <b>within-folders</b> rather than across-folder. If you prefer a across-folder scope of search for duplicates, use <a href="https://github.com/theohbrothers/rmdups-across-folders">this instead</a>.
+- NOTE: It's duplicate search scope is <b>within-folders</b> rather than across-folder. If you prefer a across-folder scope of search for duplicates, use <a href="https://github.com/theohbrothers/Remove-Duplicates-across-folders">this instead</a>.
 
 ## Features:
 - Searches through a folder and all decendent folders (i.e. subfolders) for duplicates that exist WITHIN a folder. 
@@ -20,9 +20,9 @@ A simple Powershell script that can be used to list / move / remove duplicate fi
 - User with read/write/modify permissions on script and searched directories.
 
 ## Installation/usage:
-- Open the <code>rmdups.ps1</code> in your favourite text editor and configure the script settings at the top of the script (instructions are included).
+- Open the <code>Remove-Duplicates.ps1</code> in your favourite text editor and configure the script settings at the top of the script (instructions are included).
 - Right click on the script in explorer and select <code>Run with Powershell</code>. (should be present on Windows 7 and up)
-- Alternatively, open command prompt in the script directory, and run <code>Powershell .\rmdups.ps1</code>
+- Alternatively, open command prompt in the script directory, and run <code>Powershell .\Remove-Duplicates.ps1</code>
 
 ## NOTE:
 - By default, script directory (where you run the script) needs <b>write permission</b> for session logging (output.txt). If you prefer not to, turn off session logging in script configuration.
@@ -38,7 +38,7 @@ What is a <b>duplicate file</b>?:
 What is the<b> original file</b>?:
 - A duplicate file but with the shortest name among all duplicates found.
 
-Q: Help! I am getting an error <code>'File C:\Users\User\rmdups\rmdups.ps1 cannot be loaded because the execution of scripts is disabled on this system. Please see "get-help about_signing" for more details.'</code>
+Q: Help! I am getting an error <code>'File C:\Users\User\Remove-Duplicates\Remove-Duplicates.ps1 cannot be loaded because the execution of scripts is disabled on this system. Please see "get-help about_signing" for more details.'</code>
 - You need to allow the execution of unverified scripts. Open Powershell as administrator, type <code>Set-ExecutionPolicy Unrestricted -Force</code> and press ENTER. Try running the script again. You can easily restore the security setting back by using <code>Set-ExecutionPolicy Undefined -Force</code>
 
 ## Background:
