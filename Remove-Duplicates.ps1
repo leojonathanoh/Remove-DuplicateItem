@@ -1,16 +1,24 @@
 ############### configure script settings ##########
- # Absolute path to directory where duplicates might exist. May contain trailing slash. Folders paths only.
+# Absolute path to directory where duplicates might exist. May contain trailing slash. Folders paths only.
 $startingdir = "D:\duplicatesfolder"
 
- # Mode: action to take for duplicates found
- # 0 - List only.
- # 1 - Delete permanently.
- # 2 - Delete to recycle bin (Only on Windows systems).
- # 3 - Move to $dupdir that will be created.  
- # Default: 0
+# Scope: scope to search for duplicates
+# May be 'within-folder' or 'across-folder'
+# 'within-folder' - duplicates will be located among all files found within each folder node starting from $startingdir
+# 'across-folder' - 'across-folder', duplicates will be located among all files found across all folder nodes starting from $startingdir
+$scope = 'within-folder'
+
+# Mode: action to take for duplicates found
+# 0 - List only.
+# 1 - Delete permanently.
+# 2 - Delete to recycle bin (Only on Windows systems).
+# 3 - Move to $dupdir that will be created.  
+# Default: 0
 $mode = 0
 
 # The name of the directory name where duplicates will be moved. Cannot contain the following characters:/ \ : * ? < > |
+# If $scope is 1 (across-folder), this directory will be created in the $startingdir directory
+# If $scope is 0 (within-folder), this directory will be created each searched child directory
 # NOTE: Applies only to mode 2. Edit between the quotes
 # Default: "!dup"
 $dupdir = "!dup" 
@@ -44,6 +52,11 @@ $output_dup_file = "duplicates.csv"
 $debug = 0
 ############################################################# 
 
+$devFile = Join-Path (Join-Path $PSScriptRoot 'tests') 'config.ps1'
+if ( Test-Path $devFile ) {
+	. $devFile
+}
+
 # Check parameters' argument validity
 try {
 	$ErrorActionPreference = "Stop"
@@ -52,6 +65,9 @@ try {
 		throw "Invalid starting directory! $startingdir may not contain characters: : * ? < > | "
 	}elseif(!$(Test-Path $startingdir -PathType Container)) {
 		throw "Invalid starting directory! $startingdir must be an existing folder. "
+	}elseif( !(($scope -eq 'within-folder') -or ($scope -eq 'across-folder')) ) { 
+		throw "Invalid scope! Use 'within-folder' or 'across-folder'."
+	}elseif ( ($dupdir -match '[\/\\\:\*\"\?\<\>\|]') -and ($mode -eq 2) ){
 	}elseif(($mode -gt 2) -or ($mode -lt 0)) { 
 		throw "Invalid mode! Use integer values from 0 to 2."
 	}elseif ( ($dupdir -match '[\/\\\:\*\"\?\<\>\|]') -and ($mode -eq 2) ){
@@ -83,17 +99,33 @@ try {
 		Start-Transcript -path (Join-Path $PSScriptRoot $output_cli_file) -append
 	}
 
+	if ($scope -eq 'within-folder') {
+		$searchDirsScriptblock = { Get-Item $startingdir; Get-ChildItem -Directory -Path $startingdir -Recurse -Exclude $dupdir }
+	}else {
+		$searchDirsScriptblock = { Get-Item $startingdir; }
+	}
+
 	$output_csv = ''
-	& { Get-Item $startingdir; Get-ChildItem -Directory -Path $startingdir -Recurse -Exclude $dupdir } | ForEach-Object {
+	& $searchDirsScriptblock | ForEach-Object {
 		$container = $_
 		$cd = $_.FullName # Current directory's full path
 		Write-Host "`n********************************************************************************`nFolder: $cd" -ForegroundColor Cyan
 		
+		$fileSearchParams = @{
+			Path = $container
+			File = $true
+		}
+		if ($scope -eq 'within-folder') {
+			$fileSearchParams['Recurse'] = $false 
+		}else {
+			$fileSearchParams['Recurse'] = $true 
+			Write-Host "Calculating md5 hashes for all files... This may take a while... Please be patient" -ForegroundColor Yellow
+		}
 		$f = 0 # File count
 		$hashes_unique = @{} # format: md5str => FileInfo
 		$hashes_duplicates = @{} # format: md5str => FileInfo[]
 		# Get all files found only within this directory
-		Get-ChildItem -Path $container.Fullname -File | Sort-Object Name, Extension | ForEach-Object {
+		Get-ChildItem @fileSearchParams | Sort-Object Name, Extension | ForEach-Object {
 			$f++
 
 			$md5 = (Get-FileHash -LiteralPath $_.FullName -Algorithm MD5).Hash # md5 hash of this file
