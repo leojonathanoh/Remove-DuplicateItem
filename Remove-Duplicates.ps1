@@ -1,6 +1,6 @@
 ############### configure script settings ##########
  # Absolute path to directory where duplicates might exist. May contain trailing slash. Folders paths only.
-$startingdir = "D:\duplicatesfolder" 
+ $startingdir = "D:\duplicatesfolder" 
 
 # Mode: action to take for duplicates found
 # 0 - List duplicates only. will not move or delete duplicates.
@@ -92,208 +92,136 @@ if($mode_output_cli -eq 1) {
 	Start-Transcript -path $output_cli_file -append
 }
 
-# Prepare duplicates output
-if ($mode_output_duplicates -eq 1) {
-	$output = @( '"Duplicate File","Duplicate File Size","Duplicate File Hash","Original File","Original File Size","Original File Hash"' | Out-File $output_dup_file -Encoding utf8 )
-}
+$output_csv = ''
+& { Get-Item $startingdir; Get-ChildItem -Directory -Path $startingdir -Recurse -Exclude $dupdir } | ForEach-Object {
+	$container = $_
+	$cd = $_.FullName # Current directory's full path
+	Write-Host "`nFolder: $cd" -ForegroundColor Cyan
+	
+	$f = 0 # File count
+	$hashes_unique = @{} # format: md5str => FileInfo
+	$hashes_duplicates = @{} # format: md5str => FileInfo[]
+	# Get all files found only within this directory
+	Get-ChildItem -Path $container.Fullname -File | sort Name, Extension | ForEach-Object {
+		$f++
 
-# Show configuration options to user
-Write-Host "Checking configuration options...Configuation options are valid" -ForegroundColor Green
-
-# Begin prompts to user to confirm
-Write-Host "`nAre you sure you want to run the script?" -ForegroundColor Yellow
-if($mode -eq 1) { Write-Host "`tNOTE: You have configured the script to delete files to the recycle bin." -ForegroundColor Yellow} 
-Write-Host "Press x to exit the script now. Press ENTER to continue." -ForegroundColor Yellow
-$continue = Read-Host; If ($continue -eq "x" -or $continue -eq "X") {exit}
-
-# Get only directories recursively (i.e. directories and sub-directories and sub-sub-directories etc.)
-Write-Host "`n[Retrieving all folders and sub-folders in $startingdir ...]" -ForegroundColor Cyan
-$containers = @( Get-Item -Path $startingdir | ? {$_.psIscontainer} )
-$containers += Get-ChildItem -Directory -Path $startingdir -Recurse -Exclude $dupdir #| ? {$_.psIscontainer}  # exclude $dupdirs
-
-# Get all files recursively (i.e. files in starting directory and sub-directories and sub-sub-directories etc.)
-Write-Host "`n[Retrieving all files in $startingdir and its subfolders...]" -ForegroundColor Cyan
-$files = Get-ChildItem -Path $startingdir -File -Recurse #| Select-Object FullName, @{Name="FolderDepth";Expression={$_.DirectoryName.Split('\').Count}} | Sort-Object FolderDepth, Extension, Name # Ascending
-
-# Get md5 hashes for all files
-Write-Host "`n[Calculating files' hashes ... this might take some time ...]" -ForegroundColor Cyan
-$files_hashes = @{} # format: fullpathStr => md5Str
-$files | foreach {
-	$fullpath = $_.FullName
-	$md5 = (Get-FileHash $fullpath -Algorithm MD5).Hash # md5 hash of this file
-	if (!$files_hashes.ContainsKey($fullpath)) {
-		$files_hashes.Add($fullpath, $md5)
-	}else {
-		# Duplicate!
-		$files
-	}
-}
-if($debug){$str = $files_hashes | Out-String ; Write-Host $str}
-
-$containers | ForEach-Object {
-$cd = $_.FullName # Current directory's full path
-$filesmapping = [ordered]@{}  # All files' mapping. duplicate file will point to original file. format: Obj => Obj
-
-# Get all files found only within this directory
-$files = Get-ChildItem -Path $cd -File | sort Extension
-
-# For each file, do
-:oloop foreach($f in $files) {
-	# Skip over files already checked
-	if($filesmapping.Contains($f)) {
-		if($debug){Write-Host "`t>Skipping(oloop)......." $f} 
-		continue oloop;
-	}
-	if($debug){Write-Host "`n[Looking in] -" $cd}
-
-	# Get md5 for this file.
-	$duplicates = [ordered]@{}; # To store matches against this file. format: dupObj => dupObj
-	$f_md5 = $files_hashes.($f.FullName)
-
-	# Against this file, search through all files for dups
-	:iloop foreach($_ in $files) {		  
-		# Skip over dups alrdy stored in hash
-		if($filesmapping.Contains($_)) {if($debug){Write-Host "`t>Skipping(iloop)......." $_} continue iloop}
-
-		# Get md5 for file to be compared with
-		$_md5 = $files_hashes.($_.FullName)
-		if($debug){Write-Host " - f.Name:" $f.Name "`t _Name" $_.Name}
-		if($debug){Write-Host " - f.BaseName:" $f.BaseName "`t _BaseName" $_.BaseName}
-		if($debug){Write-Host " - f md5:" $f_md5 "`t _md5:" $_md5}
-
-		# A dup is: same file contents (hash), same size, within the same container folder.
-		if(($_.Length -eq $f.Length) -and ($f_md5 -eq $_md5)) {
-			# store this first dup in hash
-			if(!$duplicates.Contains($f)) {
-				$duplicates.add($_, $f ); # format: dupObj(key) => thisObj(value)
-			}
-			# Store subsequent dups in hash
-			if(!$duplicates.Contains($_)) {
-				$duplicates.add($_, $f ); # format: dupObj(key) => thisObj(value)
-			}
-			if($debug){Write-Host "`t> Match found. File comparison: `n`t`tname: $f" "`tlast modified:" $f.LastWriteTime "`tsize:" $f.Length " vs `n`t`tname:" $_ "`t`tlast modified:" $_.LastWriteTime "`tsize:" $_.Length;}
+		$md5 = (Get-FileHash -LiteralPath $_.FullName -Algorithm MD5).Hash # md5 hash of this file
+		if ( ! $hashes_unique.ContainsKey($md5) ) {
+			$hashes_unique[$md5] = $_
 		}else {
-			if($debug){Write-Host " --- not a dupe ---" }
-		}
-	}
-
-	# If only 1 match found, file matched itself: no duplicates for this file. add to filesmapping to mark as done, and continue with next file
-	if($duplicates.Count -eq 1) { 
-		$filesmapping.add($f, $f ); # format: thisObj(key) => thisObj(value)
-		if($debug){Write-Host "`t>No dups, Skipping(oloop)......." $_} 
-		if($debug){echo "-----#g----"}
-		if($debug){echo $filesmapping}
-		continue oloop;
-	}
-
-	# - dups found - #
-	# Get shortest file name among dups. This will be the main/original file.
-	$len_shortest = $f.Name.Length;
-	$f_shortestName = $f; 
-	$duplicates.GetEnumerator() | % { 
-		$len = $_.Key.ToString().Length
-		if($debug){Write-Host ">key: " $_.key "key length: $len" }
-		if($len -lt $len_shortest) {
-			$len_shortest = $len
-			$f_shortestName = $_.Key
-			if($debug){Write-Host "(current) shortest string:" $len_shortest }
-		}
-	}
-
-	# Debug
-	if($debug){Write-Host "----#duplicates(before)-----"}
-	if($debug){echo $duplicates}
-
-	# Map all dups to their main/original file with the shortest name
-	foreach($key in $($duplicates.keys)){
-		# set key's value as shortest name
-		$duplicates[$key] = $f_shortestName # format: dupObj(key) => oriObj(value)
-		# add new mapping to filesmapping to mark as done
-		$filesmapping.Add($key, $duplicates[$key]) # format: dupObj(key) => oriObj(value)
-	}
-
-	# debug
-	if($debug){Write-Host "----#duplicates(after)-----"}
-	if($debug){echo $duplicates}
-	if($debug){Write-Host "-----#filesmapping----"}
-	if($debug){echo $filesmapping}
-}
-
-$j=0 # Total dup count within this directory
-if($mode -eq 0) {
-	$filesmapping.GetEnumerator() | % {
-		if($_.key.FullName -ne $_.value.FullName) { # exclude the original which has key==value
-			$j++
-			if ($j -eq 1) { Write-Host "`n[Mode: $mode - Listing duplicate files, and their original file]" -ForegroundColor Cyan }
-			if ($j -eq 1) { Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------" }
-			Write-Host "`t" $_.key "`t`t`t`t`t"  $_.value 
-		}
-	}
-}elseif($mode -eq 1) {
-	# Delete files to recycle bin
-	$filesmapping.GetEnumerator() | % { 
-		if($_.key.FullName -ne $_.value.FullName) { # exclude the original which has key==value
-			$j++
-			if($j -eq 1) { Write-Host "[Mode: $mode - Deleting duplicate files, keeping original file(shortest name among them)] " -ForegroundColor Cyan }
-			if($j -eq 1) { Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------" }
-			$f = $_.key
-			$v = $_.value
-			$path = $f.FullName
-			$shell = new-object -comobject "Shell.Application"
-			$item = $shell.Namespace(0).ParseName("$path")
-			$item.InvokeVerb("delete")
-
-			Write-Host "`tDeleting:`t" $f.FullName "`t`t`t`t`tOriginal:`t"   $v.FullName
-			# Dont use Remove-item, it permanently deletes
-			#Remove-item $falses
-		}
-	}
-	if($j) { Write-Host "`tDeleting duplicates successful. Original files are left intact." -ForegroundColor Green }
-}elseif($mode -eq 2) {
-	$filesmapping.GetEnumerator() | % { 
-		if($_.key.FullName -ne $_.value.FullName) { # exclude the original which has key==value
-			if($j -eq 1) { Write-Host "`n[Mode: $mode - Moving duplicate files to $dupdir, leaving intact original file] `n`tFolder: $cd" -ForegroundColor Cyan }
-			$j++
-			$f = $_.key;
-			Write-Host "`t`tMoving dup file  to: $dupdir\$f"
-			# Create dup directory if not existing
-			$duppath = $cd + "\$dupdir"
-			if(!$(Test-Path $duppath -PathType Container)) {
-				New-Item -ItemType Directory -Force -Path $duppath
+			# Duplicate!
+			if (!$hashes_duplicates.ContainsKey($md5)) {
+				$hashes_duplicates[$md5] = [System.Collections.Arraylist]@()
+				$hashes_duplicates[$md5].Add($hashes_unique[$md5]) > $null
 			}
-			# Move files
-			Move-Item "$cd\$f" "$duppath\$f"
+			$hashes_duplicates[$md5].Add($_) > $null
 		}
-	}   
-}
+	}
 
-# tell user no dups found in this folder 
-if($j -eq 0) { Write-Host "`tNo duplicates in: $cd" -ForegroundColor Green }
+	# The first object will be the Original object.
+	@($hashes_duplicates.Keys) | % {
+		$key = $_
+		$hashes_duplicates[$key] = $hashes_duplicates[$key] | Sort-Object { $_.Name.Length }
+	}
 
-# show summary only if dups exist
-$t = $files.Count # total file count within this directory
-if($j) { Write-Host " ---------- `n| summary | `n ---------- `n - original file count:$($t-$j) `n - duplicate file count:$j `n - total files: $t" -ForegroundColor Green }
+	# Calculate duplicates count (excludes original file)
+	$d = 0
+	$hashes_duplicates.GetEnumerator() | % { $d += $_.Value.Count - 1; }
 
-# output duplicates
-$filesmapping.GetEnumerator() | % {
-	if($_.key.FullName -ne $_.value.FullName) {
-		$k = $_.key
-		$v = $_.value
-		$k_fullpath = $k.FullName
-		$k_size_in_kB = "$($k.Length/1000) kB"
-		$k_hash = $files_hashes.($k.FullName)
-		$v_fullpath = $v.FullName
-		$v_size_in_kB = "$($v.Length/1000) kB"
-		$v_hash = $files_hashes.($v.FullName)
-		$output += "`"$k_fullpath`",`"$k_size_in_kB`",`"$k_hash`",`"$v_fullpath`",`"$v_size_in_kB`",`"$v_hash`""
+	# Tell user no dups found in this folder 
+	if($d -eq 0) { 
+		Write-Host "`tNo duplicates in: $cd" -ForegroundColor Green 
+	}else {
+		# Show summary only if dups exist
+		if($d) { Write-Host "- original file count:$($f-$d) `n- duplicate file count:$d `n- total files: $f" -ForegroundColor Green }
+
+		# Do the Task based on mode
+		if($mode -eq 0) {
+			Write-Host "Mode: $mode - Listing duplicate files, and their original file ..." -ForegroundColor Green
+			Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------"
+
+			# List duplicates
+			$hashes_duplicates.GetEnumerator() | % {
+				$duplicates = $_.Value
+				$duplicates[1..$($duplicates.Count - 1)] | % {
+					Write-Host "`t$($_.FullName)`t`t`t`t`t$($duplicates[0].FullName)"  
+				}
+			}
+		}elseif($mode -eq 1) {
+			Write-Host "Mode: $mode - Deleting duplicate files, keeping original file(shortest name among them) ..." -ForegroundColor Cyan
+			Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------"
+
+			# Delete files to recycle bin
+			$hashes_duplicates.GetEnumerator() | % {
+				$duplicates = $_.Value
+				$duplicates[1..$($duplicates.Count)] | % {
+					$duplicateFile = $_
+					$originalFile = $duplicates[0]
+
+					# This method does not prompt the user 
+					Add-Type -AssemblyName Microsoft.VisualBasic
+					[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($duplicateFile.FullName,'OnlyErrorDialogs','SendToRecycleBin')
+
+					# No longer using this method because each delete will prompt the user.
+					#$shell = New-Object -comobject "Shell.Application"
+					#$item = $shell.Namespace(0).ParseName($duplicateFile.FullName)
+					#$item.InvokeVerb("delete")
+
+					# Dont use Remove-item, it permanently deletes
+					#Remove-item $duplicateFile.FullName -Force
+
+					Write-Host "`tDeleting:`t$($duplicateFile.FullName)`t`t`t`t`tOriginal:`t$($originalFile.FullName)"
+
+				}
+			}
+			Write-Host "`tDeleting duplicates successful. Original files are left intact." -ForegroundColor Green
+		}elseif($mode -eq 2) {
+			Write-Host "Mode: $mode - Moving duplicate files to $dupdir, leaving intact original file..." -ForegroundColor Green 
+			$hashes_duplicates.GetEnumerator() | % {
+				$duplicates = $_.Value
+				$duplicates[1..$($duplicates.Count - 1)] | % {
+					$duplicateFile = $_
+					
+					# Create dup directory if not existing
+					$destinationDir = Join-Path $cd $dupdir
+					$destination = Join-Path $destinationDir $duplicateFile.Name
+					
+					if(!$(Test-Path $destinationDir -PathType Container)) {
+						New-Item -ItemType Directory -Force -Path $destinationDir > $null
+					}
+					# Move files
+					Write-Host "`tMoving dup file from $($duplicateFile.FullName) to $destination" -ForegroundColor Green
+					#Move-Item $duplicateFile.FullName $destination
+				}
+			}
+		}
+	}
+
+	# Collect content for the csv
+	$hashes_duplicates.GetEnumerator() | % {
+		$md5 = $_.Key
+		$duplicates = $_.Value
+		$duplicates[1..$($duplicates.Count - 1)] | % {
+			$duplicateFile = $_
+			$originalFile = $duplicates[0]
+			
+			$duplicateFile_size_in_kB = "$($duplicateFile.Length/1000) kB"
+			$originalFile_size_in_kB = "$($originalFile.Length/1000) kB"
+
+			$output_csv += "`n`"$($duplicateFile.FullName)`",`"$duplicateFile_size_in_kB`",`"$md5`",`"$($originalFile.FullName)`",`"$originalFile_size_in_kB`",`"$md5`""
+		}
 	}
 }
+
+# Export duplicates .csv
+if ($output_csv) {
+	if ($mode_output_duplicates -eq 1) {
+		$output_csv = '"Duplicate File","Duplicate File Size","Duplicate File Hash","Original File","Original File Size","Original File Hash' + $output_csv
+		$output_csv | Out-File $output_dup_file -Encoding utf8
+	}
 }
 
-# write all duplicates to file
-$output |  Out-File $output_dup_file -Encoding utf8 -Append
-
-# stop transcript
+# Stop transcript
 if($mode_output_cli -eq 1) {
 	Stop-Transcript
 }
