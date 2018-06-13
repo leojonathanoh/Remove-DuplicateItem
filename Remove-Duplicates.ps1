@@ -2,10 +2,10 @@
  # Absolute path to directory where duplicates might exist. May contain trailing slash. Folders paths only.
 $startingdir = "D:\duplicatesfolder" 
 
-# mode: action to take for duplicates found
-# 0 - list duplicates only. will not move or delete duplicates.
-# 1 - delete files to recycle bin.
-# 2 - move duped files to $dupdir that will be created.  
+# Mode: action to take for duplicates found
+# 0 - List duplicates only. will not move or delete duplicates.
+# 1 - Delete files to recycle bin.
+# 2 - Move duped files to $dupdir that will be created.  
 # Default: 0
 $mode = 0
 
@@ -14,39 +14,40 @@ $mode = 0
 # Default: "!dup"
 $dupdir = "!dup" 
 
-# output mode: console session
-# 0 - do not log the console output to file.
-# 1 - log the console output to file
+# Whether to output a transcript of the console output
+# 0 - Off
+# 1 - On
 # Default: 1
 $mode_output_cli = 1
 
-# output file name of console session. File will be created in same directory as powershell script.
+# File name of the console transcript. File will be created in same directory as powershell script.
 # NOTE: Edit between the quotes. May not contain characters: / \ : * ? < > |
 # Default: "output.txt"
 $output_cli_file = "output.txt"
 
-# output mode: duplicates 
-# 0 - do not write the duplicates to file.
-# 1 - write the duplicates to file
+# Whether to write the duplicates as .csv file for review.
+# 0 - Off
+# 1 - On
 # Default: 1
 $mode_output_duplicates = 1
 
-# output file name of duplicates as .csv. File will be created in same directory as powershell script.
+# File name of the duplicates .csv file. File will be created in same directory as powershell script.
 # NOTE: Edit between the quotes. May not contain characters: / \ : * ? < > |
 # Default: "duplicates.csv"
 $output_dup_file = "duplicates.csv"
 
-# 0 - turn off debugging.
-# 1 - turn on debugging. 
+# Debug mode
+# 0 - Off
+# 1 - On
 # Default: 0
 $debug = 0
 ############################################################# 
-# get script directory, set as cd
+# Get script directory, set as cd
 $scriptDir = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
 Set-Location $scriptDir
 Write-Host "Script directory: $scriptDir" -ForegroundColor Green
 
-# check parameters' argument validity
+# Check parameters' argument validity
 if ($startingdir -match '[\*\"\?\<\>\|]'){
 	Write-Host 'Invalid starting directory! May not contain characters: : * ? < > | ' -ForegroundColor Yellow
 	pause; exit
@@ -76,14 +77,14 @@ if ($startingdir -match '[\*\"\?\<\>\|]'){
 	pause; exit
 }
 
-# check for write permissions in script directory
+# Check for write permissions in script directory
 if ($mode_output_cli -eq 1) {
 	# check for write permissions 
 	Try { [io.file]::OpenWrite($output_cli_file).close() }
 	Catch { Write-Warning "Script directory has to be writeable to output the cli session!" }
 }
 
-# begin output of cli 
+# Begin output of cli 
 if($mode_output_cli -eq 1) {
 	$ErrorActionPreference="SilentlyContinue"
 	Stop-Transcript | out-null
@@ -91,78 +92,82 @@ if($mode_output_cli -eq 1) {
 	Start-Transcript -path $output_cli_file -append
 }
 
-# prepare duplicates output
+# Prepare duplicates output
 if ($mode_output_duplicates -eq 1) {
 	$output = @( '"Duplicate File","Duplicate File Size","Duplicate File Hash","Original File","Original File Size","Original File Hash"' | Out-File $output_dup_file -Encoding utf8 )
 }
 
-# show configuration options to user
+# Show configuration options to user
 Write-Host "Checking configuration options...Configuation options are valid" -ForegroundColor Green
 
-# begin prompts to user to confirm
+# Begin prompts to user to confirm
 Write-Host "`nAre you sure you want to run the script?" -ForegroundColor Yellow
 if($mode -eq 1) { Write-Host "`tNOTE: You have configured the script to delete files to the recycle bin." -ForegroundColor Yellow} 
 Write-Host "Press x to exit the script now. Press ENTER to continue." -ForegroundColor Yellow
 $continue = Read-Host; If ($continue -eq "x" -or $continue -eq "X") {exit}
 
-# get only directories recursively (i.e. directories and sub-directories and sub-sub-directories etc.)
+# Get only directories recursively (i.e. directories and sub-directories and sub-sub-directories etc.)
 Write-Host "`n[Retrieving all folders and sub-folders in $startingdir ...]" -ForegroundColor Cyan
 $containers = @( Get-Item -Path $startingdir | ? {$_.psIscontainer} )
 $containers += Get-ChildItem -Directory -Path $startingdir -Recurse -Exclude $dupdir #| ? {$_.psIscontainer}  # exclude $dupdirs
 
-# get all files recursively (i.e. files in starting directory and sub-directories and sub-sub-directories etc.)
+# Get all files recursively (i.e. files in starting directory and sub-directories and sub-sub-directories etc.)
 Write-Host "`n[Retrieving all files in $startingdir and its subfolders...]" -ForegroundColor Cyan
 $files = Get-ChildItem -Path $startingdir -File -Recurse #| Select-Object FullName, @{Name="FolderDepth";Expression={$_.DirectoryName.Split('\').Count}} | Sort-Object FolderDepth, Extension, Name # Ascending
 
-# get md5 hashes for all files
+# Get md5 hashes for all files
 Write-Host "`n[Calculating files' hashes ... this might take some time ...]" -ForegroundColor Cyan
 $files_hashes = @{} # format: fullpathStr => md5Str
 $files | foreach {
 	$fullpath = $_.FullName
-	$md5 = Get-FileHash $fullpath -Algorithm MD5 # md5 hash of this file
-	$md5 = $md5.Hash 
-	$files_hashes.Add($fullpath, $md5)
+	$md5 = (Get-FileHash $fullpath -Algorithm MD5).Hash # md5 hash of this file
+	if (!$files_hashes.ContainsKey($fullpath)) {
+		$files_hashes.Add($fullpath, $md5)
+	}else {
+		# Duplicate!
+		$files
+	}
 }
 if($debug){$str = $files_hashes | Out-String ; Write-Host $str}
 
 $containers | ForEach-Object {
-$cd = $_.FullName # current directory's full path
-$filesmapping = [ordered]@{}  # all files' mapping. duplicate file will point to original file. format: Obj => Obj
+$cd = $_.FullName # Current directory's full path
+$filesmapping = [ordered]@{}  # All files' mapping. duplicate file will point to original file. format: Obj => Obj
 
-# get all files found only within this directory
+# Get all files found only within this directory
 $files = Get-ChildItem -Path $cd -File | sort Extension
 
 # For each file, do
 :oloop foreach($f in $files) {
-	# skip over files already checked
+	# Skip over files already checked
 	if($filesmapping.Contains($f)) {
 		if($debug){Write-Host "`t>Skipping(oloop)......." $f} 
 		continue oloop;
 	}
 	if($debug){Write-Host "`n[Looking in] -" $cd}
 
-	# get md5 for this file.
-	$duplicates = [ordered]@{}; # to store matches against this file. format: dupObj => dupObj
+	# Get md5 for this file.
+	$duplicates = [ordered]@{}; # To store matches against this file. format: dupObj => dupObj
 	$f_md5 = $files_hashes.($f.FullName)
 
-	# against this file, search through all files for dups
+	# Against this file, search through all files for dups
 	:iloop foreach($_ in $files) {		  
-		# skip over dups alrdy stored in hash
+		# Skip over dups alrdy stored in hash
 		if($filesmapping.Contains($_)) {if($debug){Write-Host "`t>Skipping(iloop)......." $_} continue iloop}
 
-		# get md5 for file to be compared with
+		# Get md5 for file to be compared with
 		$_md5 = $files_hashes.($_.FullName)
 		if($debug){Write-Host " - f.Name:" $f.Name "`t _Name" $_.Name}
 		if($debug){Write-Host " - f.BaseName:" $f.BaseName "`t _BaseName" $_.BaseName}
 		if($debug){Write-Host " - f md5:" $f_md5 "`t _md5:" $_md5}
 
-		# a dup is: same file contents (hash), same size, within the same container folder.
+		# A dup is: same file contents (hash), same size, within the same container folder.
 		if(($_.Length -eq $f.Length) -and ($f_md5 -eq $_md5)) {
 			# store this first dup in hash
 			if(!$duplicates.Contains($f)) {
 				$duplicates.add($_, $f ); # format: dupObj(key) => thisObj(value)
 			}
-			# store subsequent dups in hash
+			# Store subsequent dups in hash
 			if(!$duplicates.Contains($_)) {
 				$duplicates.add($_, $f ); # format: dupObj(key) => thisObj(value)
 			}
@@ -172,7 +177,7 @@ $files = Get-ChildItem -Path $cd -File | sort Extension
 		}
 	}
 
-	# if only 1 match found, file matched itself: no duplicates for this file. add to filesmapping to mark as done, and continue with next file
+	# If only 1 match found, file matched itself: no duplicates for this file. add to filesmapping to mark as done, and continue with next file
 	if($duplicates.Count -eq 1) { 
 		$filesmapping.add($f, $f ); # format: thisObj(key) => thisObj(value)
 		if($debug){Write-Host "`t>No dups, Skipping(oloop)......." $_} 
@@ -182,7 +187,7 @@ $files = Get-ChildItem -Path $cd -File | sort Extension
 	}
 
 	# - dups found - #
-	# get shortest file name among dups. This will be the main/original file.
+	# Get shortest file name among dups. This will be the main/original file.
 	$len_shortest = $f.Name.Length;
 	$f_shortestName = $f; 
 	$duplicates.GetEnumerator() | % { 
@@ -195,11 +200,11 @@ $files = Get-ChildItem -Path $cd -File | sort Extension
 		}
 	}
 
-	# debug
+	# Debug
 	if($debug){Write-Host "----#duplicates(before)-----"}
 	if($debug){echo $duplicates}
 
-	# map all dups to their main/original file with the shortest name
+	# Map all dups to their main/original file with the shortest name
 	foreach($key in $($duplicates.keys)){
 		# set key's value as shortest name
 		$duplicates[$key] = $f_shortestName # format: dupObj(key) => oriObj(value)
@@ -214,7 +219,7 @@ $files = Get-ChildItem -Path $cd -File | sort Extension
 	if($debug){echo $filesmapping}
 }
 
-$j=0 # total dup count within this directory
+$j=0 # Total dup count within this directory
 if($mode -eq 0) {
 	$filesmapping.GetEnumerator() | % {
 		if($_.key.FullName -ne $_.value.FullName) { # exclude the original which has key==value
@@ -225,7 +230,7 @@ if($mode -eq 0) {
 		}
 	}
 }elseif($mode -eq 1) {
-	# delete files to recycle bin
+	# Delete files to recycle bin
 	$filesmapping.GetEnumerator() | % { 
 		if($_.key.FullName -ne $_.value.FullName) { # exclude the original which has key==value
 			$j++
@@ -239,7 +244,7 @@ if($mode -eq 0) {
 			$item.InvokeVerb("delete")
 
 			Write-Host "`tDeleting:`t" $f.FullName "`t`t`t`t`tOriginal:`t"   $v.FullName
-			# dont use Remove-item, it permanently deletes
+			# Dont use Remove-item, it permanently deletes
 			#Remove-item $falses
 		}
 	}
@@ -251,12 +256,12 @@ if($mode -eq 0) {
 			$j++
 			$f = $_.key;
 			Write-Host "`t`tMoving dup file  to: $dupdir\$f"
-			# create dup directory if not existing
+			# Create dup directory if not existing
 			$duppath = $cd + "\$dupdir"
 			if(!$(Test-Path $duppath -PathType Container)) {
 				New-Item -ItemType Directory -Force -Path $duppath
 			}
-			# move files
+			# Move files
 			Move-Item "$cd\$f" "$duppath\$f"
 		}
 	}   
