@@ -102,7 +102,7 @@ $output_csv = ''
 	$hashes_unique = @{} # format: md5str => FileInfo
 	$hashes_duplicates = @{} # format: md5str => FileInfo[]
 	# Get all files found only within this directory
-	Get-ChildItem -Path $container.Fullname -File | sort Name, Extension | ForEach-Object {
+	Get-ChildItem -Path $container.Fullname -File | Sort-Object Name, Extension | ForEach-Object {
 		$f++
 
 		$md5 = (Get-FileHash -LiteralPath $_.FullName -Algorithm MD5).Hash # md5 hash of this file
@@ -119,14 +119,14 @@ $output_csv = ''
 	}
 
 	# The first object will be the Original object.
-	@($hashes_duplicates.Keys) | % {
+	@($hashes_duplicates.Keys) | ForEach-Object {
 		$key = $_
 		$hashes_duplicates[$key] = $hashes_duplicates[$key] | Sort-Object { $_.Name.Length }
 	}
 
 	# Calculate duplicates count (excludes original file)
 	$d = 0
-	$hashes_duplicates.GetEnumerator() | % { $d += $_.Value.Count - 1; }
+	$hashes_duplicates.GetEnumerator() | ForEach-Object { $d += $_.Value.Count - 1; }
 
 	# Tell user no dups found in this folder 
 	if($d -eq 0) { 
@@ -141,9 +141,9 @@ $output_csv = ''
 			Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------"
 
 			# List duplicates
-			$hashes_duplicates.GetEnumerator() | % {
+			$hashes_duplicates.GetEnumerator() | ForEach-Object {
 				$duplicates = $_.Value
-				$duplicates[1..$($duplicates.Count - 1)] | % {
+				$duplicates[1..$($duplicates.Count - 1)] | ForEach-Object {
 					Write-Host "`t$($_.FullName)`t`t`t`t`t$($duplicates[0].FullName)"  
 				}
 			}
@@ -152,9 +152,9 @@ $output_csv = ''
 			Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------"
 
 			# Delete files to recycle bin
-			$hashes_duplicates.GetEnumerator() | % {
+			$hashes_duplicates.GetEnumerator() | ForEach-Object {
 				$duplicates = $_.Value
-				$duplicates[1..$($duplicates.Count)] | % {
+				$duplicates[1..$($duplicates.Count)] | ForEach-Object {
 					$duplicateFile = $_
 					$originalFile = $duplicates[0]
 
@@ -177,9 +177,9 @@ $output_csv = ''
 			Write-Host "`tDeleting duplicates successful. Original files are left intact." -ForegroundColor Green
 		}elseif($mode -eq 2) {
 			Write-Host "Mode: $mode - Moving duplicate files to $dupdir, leaving intact original file..." -ForegroundColor Green 
-			$hashes_duplicates.GetEnumerator() | % {
+			$hashes_duplicates.GetEnumerator() | ForEach-Object {
 				$duplicates = $_.Value
-				$duplicates[1..$($duplicates.Count - 1)] | % {
+				$duplicates[1..$($duplicates.Count - 1)] | ForEach-Object {
 					$duplicateFile = $_
 					
 					# Create dup directory if not existing
@@ -198,10 +198,10 @@ $output_csv = ''
 	}
 
 	# Collect content for the csv
-	$hashes_duplicates.GetEnumerator() | % {
+	$hashes_duplicates.GetEnumerator() | ForEach-Object {
 		$md5 = $_.Key
 		$duplicates = $_.Value
-		$duplicates[1..$($duplicates.Count - 1)] | % {
+		$duplicates[1..$($duplicates.Count - 1)] | ForEach-Object {
 			$duplicateFile = $_
 			$originalFile = $duplicates[0]
 			
