@@ -1,6 +1,6 @@
 ############### configure script settings ##########
  # Absolute path to directory where duplicates might exist. May contain trailing slash. Folders paths only.
- $startingdir = "D:\duplicatesfolder" 
+ $startingdir = "D:\duplicatesfolder"
 
  # Mode: action to take for duplicates found
  # 0 - List only.
@@ -157,23 +157,27 @@ try {
 						$originalFile = $duplicates[0]
 
 						Write-Host "`tDeleting:`t$($duplicateFile.FullName)`t`t`t`t`tOriginal:`t$($originalFile.FullName)"
-						if ($mode -eq 1) {
-							# Delete to recycle bin
+						if (!$debug) {
+							if ($mode -eq 1) {
+								# Delete to recycle bin
 
-							# This method does not prompt the user 
-							Add-Type -AssemblyName Microsoft.VisualBasic
-							[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($duplicateFile.FullName,'OnlyErrorDialogs','SendToRecycleBin')
+								# This method does not prompt the user 
+								Add-Type -AssemblyName Microsoft.VisualBasic
+								[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($duplicateFile.FullName,'OnlyErrorDialogs','SendToRecycleBin')
 
-							# No longer using this method because each delete will prompt the user.
-							#$shell = New-Object -comobject "Shell.Application"
-							#$item = $shell.Namespace(0).ParseName($duplicateFile.FullName)
-							#$item.InvokeVerb("delete")
-						}elseif ($mode -eq 2) {
-							# Permanently delete
-							try {
-								Remove-item $duplicateFile.FullName -Force -ErrorAction Stop
-							}catch {
-								Write-Warning "Could not delete $($duplicateFile.FullName). Reason $($_.Exception.Message)"
+								# No longer using this method because each delete will prompt the user.
+								#$shell = New-Object -comobject "Shell.Application"
+								#$item = $shell.Namespace(0).ParseName($duplicateFile.FullName)
+								#$item.InvokeVerb("delete")
+							}elseif ($mode -eq 2) {
+								# Permanently delete
+								try {
+									if ($debug) {
+										Remove-item $duplicateFile.FullName -Force -ErrorAction Stop
+									}
+								}catch {
+									Write-Warning "Could not delete $($duplicateFile.FullName). Reason $($_.Exception.Message)"
+								}
 							}
 						}
 					}
@@ -186,16 +190,18 @@ try {
 					$duplicates[1..$($duplicates.Count - 1)] | ForEach-Object {
 						$duplicateFile = $_
 						
-						# Create dup directory if not existing
+						# Move to a dup directory
 						$destinationDir = Join-Path $cd $dupdir
 						$destination = Join-Path $destinationDir $duplicateFile.Name
-						
-						if(!$(Test-Path $destinationDir -PathType Container)) {
-							New-Item -ItemType Directory -Force -Path $destinationDir > $null
-						}
-						# Move files
 						Write-Host "`tMoving dup file from $($duplicateFile.FullName) to $destination" -ForegroundColor Green
-						Move-Item $duplicateFile.FullName $destination
+						
+						if (!$debug) {
+							# Create dup directory if not existing
+							if(!$(Test-Path $destinationDir -PathType Container)) {
+								New-Item -ItemType Directory -Force -Path $destinationDir > $null
+							}
+							Move-Item $duplicateFile.FullName $destination
+						}
 					}
 				}
 			}
