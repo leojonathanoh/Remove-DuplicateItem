@@ -1,6 +1,6 @@
 ############### configure script settings ##########
  # Absolute path to directory where duplicates might exist. May contain trailing slash. Folders paths only.
- $startingdir = "D:\duplicatesfolder"
+$startingdir = "D:\duplicatesfolder"
 
  # Mode: action to take for duplicates found
  # 0 - List only.
@@ -8,7 +8,7 @@
  # 2 - Delete to recycle bin (Only on Windows systems).
  # 3 - Move to $dupdir that will be created.  
  # Default: 0
- $mode = 0
+$mode = 0
 
 # The name of the directory name where duplicates will be moved. Cannot contain the following characters:/ \ : * ? < > |
 # NOTE: Applies only to mode 2. Edit between the quotes
@@ -149,7 +149,6 @@ try {
 				}
 				Write-Host "`tdup file`t`t`t`t`toriginal file`n`t----------`t`t`t`t`t--------------"
 
-				
 				$hashes_duplicates.GetEnumerator() | ForEach-Object {
 					$duplicates = $_.Value
 					$duplicates[1..$($duplicates.Count)] | ForEach-Object {
@@ -237,5 +236,4 @@ try {
 	}
 }catch {
 	Write-Warning "Stopped due to an error. Reason: $($_.Exception.Message)"
-
 }
