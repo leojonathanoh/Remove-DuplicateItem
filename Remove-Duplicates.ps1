@@ -34,13 +34,15 @@ $mode_output_cli = 0
 # Default: "output.txt"
 $output_cli_file = "output.txt"
 
-# Whether to write the duplicates as .csv file for review.
+# Whether to write the duplicates as .csv / .json file for review.
 # 0 - Off
 # 1 - On
 # Default: 1
 $mode_output_duplicates = 1
 
-# File name of the duplicates .csv file. File will be created in same directory as powershell script.
+# File name of the duplicates export file. File will be created in same directory as powershell script.
+# If the file extension is '.json', export will be in JSON format.
+# If the file extension is '.csv', export will be in CSV format.
 # NOTE: Edit between the quotes. May not contain characters: / \ : * ? < > |
 # Default: "duplicates.csv"
 $output_dup_file = "duplicates.csv"
@@ -56,6 +58,9 @@ $devFile = Join-Path (Join-Path $PSScriptRoot 'tests') 'config.ps1'
 if ( Test-Path $devFile ) {
 	. $devFile
 }
+
+# Instantiate the duplicates Object
+$duplicatesObj = @{}
 
 # Check parameters' argument validity
 try {
@@ -105,7 +110,6 @@ try {
 		$searchDirsScriptblock = { Get-Item $startingdir; }
 	}
 
-	$output_csv = ''
 	& $searchDirsScriptblock | ForEach-Object {
 		$container = $_
 		$cd = $_.FullName # Current directory's full path
@@ -238,27 +242,50 @@ try {
 			}
 		}
 
-		# Collect content for the csv
+		# Populate the duplicates object, Collect basic content for the csv
 		$hashes_duplicates.GetEnumerator() | ForEach-Object {
 			$md5 = $_.Key
 			$duplicates = $_.Value
-			$duplicates[1..$($duplicates.Count - 1)] | ForEach-Object {
-				$duplicateFile = $_
-				$originalFile = $duplicates[0]
-				
-				$duplicateFile_size_in_kB = "$($duplicateFile.Length/1000) kB"
-				$originalFile_size_in_kB = "$($originalFile.Length/1000) kB"
+			$originalFile = $duplicates[0]
+			$duplicateFiles = $duplicates[1..$($duplicates.Count - 1)]
 
-				$output_csv += "`n`"$($duplicateFile.FullName)`",`"$duplicateFile_size_in_kB`",`"$md5`",`"$($originalFile.FullName)`",`"$originalFile_size_in_kB`",`"$md5`""
+			# Populate the duplicates object (for later serialization, if needed)
+			$duplicatesObj[$originalFile.FullName] = @{
+				md5 = $md5
+				originalFile = $originalFile
+				duplicateFiles  = $duplicateFiles
 			}
 		}
 	}
 
-	# Export duplicates .csv
-	if ($output_csv) {
-		if ($mode_output_duplicates -eq 1) {
-			$output_csv = '"Duplicate File","Duplicate File Size","Duplicate File Hash","Original File","Original File Size","Original File Hash' + $output_csv
-			$output_csv | Out-File (Join-Path $PSScriptRoot $output_dup_file) -Encoding utf8
+	# Export duplicates .json or .csv
+	if ($mode_output_duplicates -eq 1) {
+		$exportFilePath = Join-Path $PSScriptRoot $output_dup_file
+		Write-Host "Exporting duplicates file to $exportFilePath" -ForegroundColor Cyan
+
+		if ($output_dup_file.Trim() -match '\.json$') {
+			# JSON export
+			$duplicatesObj | ConvertTo-Json -Depth 2 | Out-File $exportFilePath -Encoding utf8
+		}else {
+			# CSV export
+			$output_csv = ''
+			$duplicatesObj.GetEnumerator() | % {
+				$duplicateObj = $_.Value
+				$md5 = $duplicateObj['md5']
+				$originalFile = $duplicateObj['originalFile']
+				$duplicateFiles = $duplicateObj['duplicateFiles']
+				
+				$duplicateFiles | ForEach-Object {
+					$duplicateFile = $_
+					
+					$duplicateFile_size_in_kB = "$($duplicateFile.Length/1000) kB"
+					$originalFile_size_in_kB = "$($originalFile.Length/1000) kB"
+
+					$output_csv += "`n`"$($duplicateFile.Directory.FullName)`",`"$($duplicateFile.FullName)`",`"$duplicateFile_size_in_kB`",`"$md5`",`"$($originalFile.Directory.FullName)`",`"$($originalFile.FullName)`",`"$originalFile_size_in_kB`",`"$md5`""
+				}
+			}
+			$output_csv = '"Duplicate File Directory", "Duplicate File","Duplicate File Size","Duplicate File Hash","Original File Directory","Original File","Original File Size","Original File Hash' + $output_csv
+			$output_csv | Out-File $exportFilePath -Encoding utf8
 		}
 	}
 
