@@ -48,6 +48,7 @@ $mode_output_duplicates = 1
 $output_dup_file = "duplicates.csv"
 
 # Debug mode
+# In debug mode, regardless of $mode specified, no files will be deleted or moved.
 # 0 - Off
 # 1 - On
 # Default: 0
@@ -243,7 +244,7 @@ try {
 						# Move to a dup directory
 						$destinationDir = Join-Path $scopeDir $dupdir
 						$destination = Join-Path $destinationDir $duplicateFile.Name
-						Write-Host "`tMoving dup file from $($duplicateFile.FullName) to $destination" -ForegroundColor Green
+						Write-Host "`tMoving dup file from $($duplicateFile.FullName) to $destination"
 						
 						if (!$debug) {
 							# Create dup directory if not existing
