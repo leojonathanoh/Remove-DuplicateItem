@@ -99,11 +99,11 @@ if($mode_output_cli -eq 1) {
 
 # Import Module
 try {
-	Import-Module 'Get-Duplicates' -ErrorAction Stop 3>$null
+	Import-Module 'Get-Duplicate' -ErrorAction Stop 3>$null
 }catch {
-	$module = Import-Module (Join-Path $PSScriptRoot './Modules/Get-Duplicates/Get-Duplicates.psm1' ) -Force -PassThru -ErrorAction SilentlyContinue 3>$null
+	$module = Import-Module (Join-Path $PSScriptRoot './Modules/Get-Duplicate/Get-Duplicate.psm1' ) -Force -PassThru -ErrorAction SilentlyContinue 3>$null
 	if (!$module) {
-		Write-Warning "Could not import Get-Duplicates module. Exiting"
+		Write-Warning "Could not import Get-Duplicate module. Exiting"
 		return
 	}
 }
@@ -134,7 +134,7 @@ try {
 			AsHashtable = $true
 			ExcludeDirectory = $dupdir
 		}
-		$hashes_duplicates = Get-Duplicates @params
+		$hashes_duplicates = Get-Duplicate @params
 		
 		# Populate the SearchObject, Collect basic content for the csv
 		$hashes_duplicates.GetEnumerator() | ForEach-Object {

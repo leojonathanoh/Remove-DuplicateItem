@@ -2,7 +2,7 @@
 # In recurse mode, duplicates will be located among all files found across all folder nodes starting from a given path
 # In inverse mode, unique files will be located instead of duplicate files.
 # If hashtable mode is specified, a hashtable will be returned in format @{ [string]"$md5" = [FileInfo[]]$files }
-function Get-Duplicates {
+function Get-Duplicate {
     param(
         [Parameter(ValueFromPipeline, ParameterSetName="Pipeline",
             #Position=0,
@@ -67,10 +67,10 @@ function Get-Duplicates {
                 $InputObject | % {
                     if ($_ -is [string]) {
                         $PSBoundParameters.Remove('InputObject') > $null
-                        Get-Duplicates -Path $_ @PSBoundParameters
+                        Get-Duplicate -Path $_ @PSBoundParameters
                     }elseif ($_ -is [System.IO.FileInfo]) {
                         $PSBoundParameters.Remove('InputObject') > $null
-                        Get-Duplicates -Path $_.FullName @PSBoundParameters
+                        Get-Duplicate -Path $_.FullName @PSBoundParameters
                     }
                 }
             }
