@@ -120,7 +120,7 @@ try {
 	}
 
 	& { if ($scope -match 'WithinFolder') {
-			Get-Item $startingDir; Get-ChildItem -Folder -Path $startingDir -Exclude $dupdir
+			Get-Item $startingDir; Get-ChildItem -Directory -Path $startingDir -Exclude $dupdir -Recurse
 		}else {
 			Get-Item $startingDir
 			Write-Host "The AcrossFolder search scope might take a while ... Please be patient" -ForegroundColor Yellow		
@@ -168,8 +168,8 @@ try {
 		$results.GetEnumerator() | ForEach-Object {
 			if ($scope -match 'WithinFolder') {
 				$scopeDir = $originalFile.Directory.FullName
+				Write-Host "`n********************************************************************************`nFolder: $scopeDir" -ForegroundColor Cyan		
 			}
-			Write-Host "`n********************************************************************************`nFolder: $scopeDir" -ForegroundColor Cyan		
 	
 			$result = $_.Value
 			$md5 = $result['md5']
@@ -184,7 +184,7 @@ try {
 				Write-Host "`tNo duplicates in: $scopeDir" -ForegroundColor Green 
 			}else {
 				# Show summary only if dups exist
-				if($d) { Write-Host "Total files count: $($d + 1), Original files count: 1, Duplicate files count: $d" -ForegroundColor Green }
+				if($d) { Write-Host "Files: $($d + 1), Original file: 1, Duplicate files: $d" -ForegroundColor Green }
 
 				# Do the Task based on mode
 				if($mode -eq 0) {
