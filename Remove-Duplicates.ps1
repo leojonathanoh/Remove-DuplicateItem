@@ -118,7 +118,7 @@ try {
         duplicate_files_count = 0
 	}
 
-	&  { if ($scope -match 'WithinFolder') {
+	& { if ($scope -match 'WithinFolder') {
 			Get-Item $startingDir; Get-ChildItem -Folder -Path $startingDir -Exclude $dupdir
 		}else {
 			Get-Item $startingDir
@@ -128,10 +128,10 @@ try {
 		$container = $_
 
 		$params = @{
-			Path = $container
+			Path = $container.FullName
 			Recurse = if ($scope -match 'AcrossFolder') { $true } else { $false }
-			Exclude = $dupdir
 			AsHashtable = $true
+			ExcludeDirectory = $dupdir
 		}
 		$hashes_duplicates = Get-Duplicates @params
 		
