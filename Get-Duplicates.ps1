@@ -3,10 +3,10 @@
 $startingDir = "D:\duplicatesfolder"
 
 # Scope: scope to search for duplicates
-# May be 'within-folder' or 'across-folder'
-# 'within-folder' - duplicates will be located among all files found within each folder node starting from $startingDir
-# 'across-folder' - 'across-folder', duplicates will be located among all files found across all folder nodes starting from $startingDir
-$scope = 'within-folder'
+# May be 'withinFolder' or 'acrossFolder'
+# 'withinFolder' - duplicates will be located among all files found within each folder node starting from $startingDir
+# 'acrossFolder' - 'acrossFolder', duplicates will be located among all files found across all folder nodes starting from $startingDir
+$scope = 'withinFolder'
 
 # Mode: action to take for duplicates found
 # 0 - List only.
@@ -17,8 +17,8 @@ $scope = 'within-folder'
 $mode = 0
 
 # The name of the directory name where duplicates will be moved. Cannot contain the following characters:/ \ : * ? < > |
-# If $scope is 1 (across-folder), this directory will be created in the $startingDir directory
-# If $scope is 0 (within-folder), this directory will be created each searched child directory
+# If $scope is 1 (acrossFolder), this directory will be created in the $startingDir directory
+# If $scope is 0 (withinFolder), this directory will be created each searched child directory
 # NOTE: Applies only to mode 2. Edit between the quotes
 # Default: "!dup"
 $dupdir = "!dup" 
@@ -59,109 +59,90 @@ if ( Test-Path $devFile ) {
 	. $devFile
 }
 
+if ($startingDir -match '[\*\"\?\<\>\|]'){
+	throw "Invalid starting directory! $startingDir may not contain characters: : * ? < > | "
+}elseif (! $(Test-Path $startingDir -PathType Container) ) {
+	throw "Invalid starting directory! $startingDir must be an existing folder. "
+}elseif (! (($scope -eq 'withinFolder') -or ($scope -eq 'acrossFolder')) ) { 
+	throw "Invalid scope $scope! Use 'withinFolder' or 'acrossFolder'."
+}elseif ( ($mode -gt 3) -or ($mode -lt 0) ) { 
+	throw "Invalid mode! Use integer values from 0 to 2."
+}elseif ( ($dupdir -match '[\/\\\:\*\"\?\<\>\|]') -and ($mode -eq 2) ){
+	throw "Invalid duplicates directory! $dupdir may not contain characters: / \ : * ? < > | "
+}elseif ( ($mode_output_cli -gt 1) -or ($mode_output_cli -lt 0) ) { 
+	throw "Invalid console output mode! Use integer values from 0 to 1."
+}elseif ($output_cli_file -match '[\/\\\:\*\"\?\<\>\|]') { 
+	throw "Invalid output file name of console session! May not contain characters: / \ : * ? < > | "
+}elseif ( ($mode_output_duplicates -gt 1) -or ($mode_output_duplicates -lt 0) ) { 
+	throw "Invalid duplicates output mode! Use integer values from 0 to 1."
+}elseif ($output_dup_file -match '[\/\\\:\*\"\?\<\>\|]') { 
+	throw "Invalid output file name of duplicates! May not contain characters: / \ : * ? < > | "
+}elseif ( ($debug -gt 1) -or ($debug -lt 0) ) { 
+	throw "Invalid debug mode! Use integer values from 0 to 1."
+}
+
+# Get script directory, set as cd
+Write-Host "Script directory: $PSScriptRoot" -ForegroundColor Green
+
+# Check for write permissions in script directory
+if ($mode_output_cli -eq 1) {
+	# check for write permissions 
+	Try { [io.file]::OpenWrite((Join-Path $PSScriptRoot $output_cli_file)).close() }
+	Catch { Write-Warning "Script directory has to be writeable to output the cli session!" }
+}
+
+# Begin output of cli 
+if($mode_output_cli -eq 1) {
+	Start-Transcript -path (Join-Path $PSScriptRoot $output_cli_file) -append
+}
+
+# Import Module
+try {
+	Import-Module 'Get-Duplicates' -ErrorAction Stop 3>$null
+}catch {
+	$module = Import-Module (Join-Path $PSScriptRoot './Modules/Get-Duplicates/Get-Duplicates.psm1' ) -Force -PassThru -ErrorAction SilentlyContinue 3>$null
+	if (!$module) {
+		Write-Warning "Could not import Get-Duplicates module. Exiting"
+		return
+	}
+}
+
 # Check parameters' argument validity
 try {
-	$ErrorActionPreference = "Stop"
-
-	if ($startingDir -match '[\*\"\?\<\>\|]'){
-		throw "Invalid starting directory! $startingDir may not contain characters: : * ? < > | "
-	}elseif (! $(Test-Path $startingDir -PathType Container) ) {
-		throw "Invalid starting directory! $startingDir must be an existing folder. "
-	}elseif (! (($scope -eq 'within-folder') -or ($scope -eq 'across-folder')) ) { 
-		throw "Invalid scope $scope! Use 'within-folder' or 'across-folder'."
-	}elseif ( ($mode -gt 3) -or ($mode -lt 0) ) { 
-		throw "Invalid mode! Use integer values from 0 to 2."
-	}elseif ( ($dupdir -match '[\/\\\:\*\"\?\<\>\|]') -and ($mode -eq 2) ){
-		throw "Invalid duplicates directory! $dupdir may not contain characters: / \ : * ? < > | "
-	}elseif ( ($mode_output_cli -gt 1) -or ($mode_output_cli -lt 0) ) { 
-		throw "Invalid console output mode! Use integer values from 0 to 1."
-	}elseif ($output_cli_file -match '[\/\\\:\*\"\?\<\>\|]') { 
-		throw "Invalid output file name of console session! May not contain characters: / \ : * ? < > | "
-	}elseif ( ($mode_output_duplicates -gt 1) -or ($mode_output_duplicates -lt 0) ) { 
-		throw "Invalid duplicates output mode! Use integer values from 0 to 1."
-	}elseif ($output_dup_file -match '[\/\\\:\*\"\?\<\>\|]') { 
-		throw "Invalid output file name of duplicates! May not contain characters: / \ : * ? < > | "
-	}elseif ( ($debug -gt 1) -or ($debug -lt 0) ) { 
-		throw "Invalid debug mode! Use integer values from 0 to 1."
+    # Instantiate the SearchObject
+    $searchObj = @{
+        startingDir = $startingDir
+        scope = $scope
+        results = @{}
+        results_count = 0
+        duplicate_files_count = 0
 	}
 
-	# Get script directory, set as cd
-	Write-Host "Script directory: $PSScriptRoot" -ForegroundColor Green
-
-	# Check for write permissions in script directory
-	if ($mode_output_cli -eq 1) {
-		# check for write permissions 
-		Try { [io.file]::OpenWrite((Join-Path $PSScriptRoot $output_cli_file)).close() }
-		Catch { Write-Warning "Script directory has to be writeable to output the cli session!" }
-	}
-
-	# Begin output of cli 
-	if($mode_output_cli -eq 1) {
-		Start-Transcript -path (Join-Path $PSScriptRoot $output_cli_file) -append
-	}
-
-	# Instantiate the duplicates Object
-	$searchObj = @{
-		startingDir = $startingDir
-		scope = $scope
-		results = @{}
-	}
-
-	if ($scope -eq 'within-folder') {
-		$searchDirsScriptblock = { Get-Item $startingDir; Get-ChildItem -Directory -Path $startingDir -Recurse -Exclude $dupdir }
-	}else {
-		$searchDirsScriptblock = { Get-Item $startingDir; }
-	}
-
-	Write-Host "Searching for all duplicates starting from $startingDir ..." -ForegroundColor Cyan
-	& $searchDirsScriptblock | ForEach-Object {
-		$container = $_
-		
-		$fileSearchParams = @{
-			Path = $container
-			File = $true
-			ReadOnly = $true
-		}
-		if ($scope -eq 'within-folder') {
-			$fileSearchParams['Recurse'] = $false 
+	&  { if ($scope -match 'WithinFolder') {
+			Get-Item $startingDir; Get-ChildItem -Folder -Path $startingDir -Exclude $dupdir
 		}else {
-			$fileSearchParams['Recurse'] = $true 
-			Write-Host "Calculating md5 hashes for all files... This may take a while... Please be patient" -ForegroundColor Yellow
+			Get-Item $startingDir
+			Write-Host "The AcrossFolder search scope might take a while ... Please be patient" -ForegroundColor Yellow		
 		}
-		$f = 0 # File count
-		$hashes_unique = @{} # format: md5str => FileInfo
-		$hashes_duplicates = @{} # format: md5str => FileInfo[]
-		# Get all files found only within this directory
-		Get-ChildItem @fileSearchParams | Sort-Object Name, Extension | ForEach-Object {
-			$f++
+	} | ForEach-Object {
+		$container = $_
 
-			$md5 = (Get-FileHash -LiteralPath $_.FullName -Algorithm MD5).Hash # md5 hash of this file
-			if ( ! $hashes_unique.ContainsKey($md5) ) {
-				$hashes_unique[$md5] = $_
-			}else {
-				# Duplicate!
-				if (!$hashes_duplicates.ContainsKey($md5)) {
-					$hashes_duplicates[$md5] = [System.Collections.Arraylist]@()
-					$hashes_duplicates[$md5].Add($hashes_unique[$md5]) > $null
-				}
-				$hashes_duplicates[$md5].Add($_) > $null
-			}
+		$params = @{
+			Path = $container
+			Recurse = if ($scope -match 'AcrossFolder') { $true } else { $false }
+			Exclude = $dupdir
+			AsHashtable = $true
 		}
-
-		# The first object will be the Original object.
-		@($hashes_duplicates.Keys) | ForEach-Object {
-			$key = $_
-			$hashes_duplicates[$key] = $hashes_duplicates[$key] | Sort-Object { $_.Name.Length }
-		}
-
-		# Populate the duplicates object, Collect basic content for the csv
+		$hashes_duplicates = Get-Duplicates @params
+		
+		# Populate the SearchObject, Collect basic content for the csv
 		$hashes_duplicates.GetEnumerator() | ForEach-Object {
 			$md5 = $_.Key
 			$duplicates = $_.Value
 			$originalFile = $duplicates[0]
 			$duplicateFiles = $duplicates[1..$($duplicates.Count - 1)]
 
-			# Populate the duplicates object (for later serialization, if needed)
+			# Populate the SearchObject
 			$searchObj['results'][$originalFile.FullName] = @{
 				md5 = $md5
 				originalFile = $originalFile
@@ -169,16 +150,22 @@ try {
 			}
 		}
 	}
-	Write-Host "Search for all duplicates successful." -ForegroundColor Cyan
+	# Populate the SearchObject
+	$searchObj['results_count'] = $searchObj['results'].Keys.Count
+	$searchObj['results'].GetEnumerator() | % { 
+		$searchObj['duplicate_files_count'] += $_.Value['duplicateFiles'].Count 
+	}
 
 	# Perform an action on the duplicates: List; Delete to Recycle Bin (Windows only); Delete Permanently; Move to a specified directory
-	if ($mode -is [int]) {
+	if ($searchObj['results_count'] -eq 0) {
+		Write-Host "No duplicates were found." -ForegroundColor Green
+	}else {
 		$scope = $searchObj['scope']
 		$results = $searchObj['results']
 		$scopeDir = $searchObj['startingDir']
 
 		$results.GetEnumerator() | % {
-			if ($scope -eq 'within-folder') {
+			if ($scope -match 'WithinFolder') {
 				$scopeDir = $originalFile.Directory.FullName
 			}
 			Write-Host "`n********************************************************************************`nFolder: $scopeDir" -ForegroundColor Cyan		
@@ -188,7 +175,7 @@ try {
 			$originalFile = $result['originalFile']
 			$duplicateFiles = $result['duplicateFiles']
 
-			# Calculate duplicates count (excludes original file)
+			# Duplicates count
 			$d = $duplicateFiles.Count
 
 			# Tell user no dups found in this folder 
@@ -196,7 +183,7 @@ try {
 				Write-Host "`tNo duplicates in: $scopeDir" -ForegroundColor Green 
 			}else {
 				# Show summary only if dups exist
-				if($d) { Write-Host "Total files count: $f, Original files count: $($f-$d), Duplicate files count: $d" -ForegroundColor Green }
+				if($d) { Write-Host "Total files count: $($d + 1), Original files count: 1, Duplicate files count: $d" -ForegroundColor Green }
 
 				# Do the Task based on mode
 				if($mode -eq 0) {
