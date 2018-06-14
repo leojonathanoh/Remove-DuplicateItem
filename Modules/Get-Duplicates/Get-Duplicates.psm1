@@ -83,7 +83,7 @@ function Get-Duplicates {
     }
 
     if ($Inverse) {
-        $hashes_duplicates.Keys | % {
+        $hashes_duplicates.Keys | ForEach-Object {
             if ($hashes_unique.ContainsKey($_)) {
                 $hashes_unique.Remove($_)
             }

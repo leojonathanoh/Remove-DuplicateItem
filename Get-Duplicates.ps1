@@ -152,7 +152,7 @@ try {
 	}
 	# Populate the SearchObject
 	$searchObj['results_count'] = $searchObj['results'].Keys.Count
-	$searchObj['results'].GetEnumerator() | % { 
+	$searchObj['results'].GetEnumerator() | ForEach-Object { 
 		$searchObj['duplicate_files_count'] += $_.Value['duplicateFiles'].Count 
 	}
 
@@ -164,7 +164,7 @@ try {
 		$results = $searchObj['results']
 		$scopeDir = $searchObj['startingDir']
 
-		$results.GetEnumerator() | % {
+		$results.GetEnumerator() | ForEach-Object {
 			if ($scope -match 'WithinFolder') {
 				$scopeDir = $originalFile.Directory.FullName
 			}
@@ -271,7 +271,7 @@ try {
 		}else {
 			# CSV export
 			$output_csv = ''
-			$results.GetEnumerator() | % {
+			$results.GetEnumerator() | ForEach-Object {
 				$result = $_.Value
 				$md5 = $result['md5']
 				$originalFile = $result['originalFile']
