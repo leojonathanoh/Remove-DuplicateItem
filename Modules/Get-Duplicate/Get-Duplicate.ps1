@@ -30,7 +30,7 @@ function Get-Duplicate {
             Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [ValidateScript({
-            if ((! (Test-Path -Literal $_ -PathType Container) ) #-or
+            if ((! (Test-Path -LiteralPath $_ -PathType Container) ) #-or
                 #($_.IndexOfAny([System.IO.Path]::GetInvalidFileNameChars()) -ne -1) #-or
                 #($_.IndexOfAny([System.IO.Path]::GetInvalidPathChars()) -ne -1)
                 ) {
@@ -67,13 +67,15 @@ function Get-Duplicate {
         try {
             if ($InputObject) {
                 if ($InputObject -is [array]) { 
-                    $InputObject | % {
+                    $InputObject | ForEach-Object {
                         if ($_ -is [string]) {
                             $PSBoundParameters.Remove('InputObject') > $null
                             Get-Duplicate -Path $_ @PSBoundParameters
-                        }elseif ($_ -is [System.IO.FileInfo]) {
+                        }elseif ($_ -is [System.IO.FileSystemInfo]) {
                             $PSBoundParameters.Remove('InputObject') > $null
                             Get-Duplicate -Path $_.FullName @PSBoundParameters
+                        }else {
+                            Get-Duplicate -Path ($_ | Out-String) @PSBoundParameters
                         }
                     }
                 }
@@ -87,7 +89,7 @@ function Get-Duplicate {
                     $fileSearchParams['Path'] = $Path
                 }
                 if ($LiteralPath) {
-                    $fileSearchParams['Path'] = $LiteralPath
+                    $fileSearchParams['LiteralPath'] = $LiteralPath
                 }
                 if ($Exclude) {
                     $fileSearchParams['Exclude'] = $Exclude
