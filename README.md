@@ -43,6 +43,9 @@ What is the **original file**?
 Q: Help! I am getting an error `'File C:\Users\User\Remove-Duplicates\Remove-Duplicates.ps1 cannot be loaded because the execution of scripts is disabled on this system. Please see "get-help about_signing" for more details.'`
 - You need to allow the execution of unverified scripts. Open Powershell as administrator, type `Set-ExecutionPolicy Unrestricted -Force` and press ENTER. Try running the script again. You can easily restore the security setting back by using `Set-ExecutionPolicy Undefined -Force`
 
+## Dependencies 
+- `Get-Duplicate` module, which is included.
+
 ## Background:
 - Most people create duplicate files within a specific folder either *accidentally*, or *forgetfully*, or *obliviously*
 	- Accidentally: For instance, you create a file, and accidentally press Ctrl-C and Ctrl-V in the wrong place - a possible scenario, in explorer while highlighting on a file or a bunch of files, until you notice a bunch of copied files with appended '-Copy' or '- Copy 1' or '1 - Copy - Copy (1)'.
