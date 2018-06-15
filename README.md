@@ -8,11 +8,11 @@ It's duplicate file search scope may be **within-folders** or **across-folder**.
 	- Across-folder of: e.g. `C:\folder_with_dups\1.txt` and `C:\folder_with_dups\deeper_folder\2.txt` are identical in content, file size, and in the same folder. The script marks this as duplicates.
 - Choose an action to take with the duplicates:
 	1. List duplicates 
-	2. Delete duplicates to the recycle bin, leaving the original file intact (only for Windows)
+	2. Delete duplicates to the recycle bin, leaving the original file inta`ct (only for Windows)
 	3. Delete duplicates permanently, leaving the original file intact
 	4. Move duplicates to a newly created folder within the folder where duplicates exist, leaving the original file intact
-- Outputs all duplicates to a .json, or .csv file for laterreview.
-- Logs the entire console session (output.txt) to the script's directory for later review.
+- Option to output all duplicates to a `.json`, or `.csv` file for later review.
+- Option to log the entire console session (`output.txt`) to the script's directory for later review.
 
 ## Requirements:
 - Powershell v3
