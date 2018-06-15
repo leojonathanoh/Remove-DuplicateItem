@@ -1,9 +1,9 @@
 # Remove-Duplicates
-A simple Powershell script that can be used to list / move / remove duplicate files on Windows / *nix systems. 
+A simple Powershell script that can be used to list / move / remove duplicate files from a given folder on Windows / \*nix systems. 
 It's duplicate file search scope may be **within-folders** or **across-folder**.
 
 ## Features:
-- Searches for, starting from a given folder, duplicate files occuring within a descendent folder, or across descendent folders (i.e. regardless of folder).
+- Searches within given folder, for duplicate files occuring *within* a descendent folder, or *across* descendent folders (i.e. regardless of folder).
 	- Within-folder of `C:`: e.g. `C:\folder_with_dups\1.txt` and `C:\folder_with_dups\2.txt` are identical in content, file size, and in the same folder. The script marks this as duplicates.
 	- Across-folder of `C:`: e.g. `C:\folder_1\1.txt` and `C:\folder_2\2.txt` are identical in content, file size, and in the same folder. The script marks this as duplicates.
 - Choose an action to take with the duplicates:
