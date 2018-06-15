@@ -19,14 +19,13 @@ It's duplicate file search scope may be **within-folders** or **across-folder**.
 - `Windows` / `*nix` environment
 - User with read/write/modify permissions on script and searched directories.
 
+## Dependencies 
+- `Get-Duplicate` module, which is included.
+
 ## Installation/usage:
 - Open the `Remove-Duplicates.ps1` in your favourite text editor and configure the script settings at the top of the script (instructions are included).
 - Right click on the script in explorer and select `Run with Powershell`. (should be present on Windows 7 and up)
 - Alternatively, open command prompt in the script directory, and run `Powershell .\Remove-Duplicates.ps1`
-
-## NOTE:
-- By default, script directory (where you run the script) needs **write permission** for session logging (output.txt). If you prefer not to, turn off session logging in script configuration.
-- If using mode 1 or 2, ensure directories searched have **read,write,execute,modify permissions**.
 
 ## FAQ
 What is a **duplicate file**?
@@ -42,9 +41,6 @@ What is the **original file**?
 
 Q: Help! I am getting an error `'File C:\Users\User\Remove-Duplicates\Remove-Duplicates.ps1 cannot be loaded because the execution of scripts is disabled on this system. Please see "get-help about_signing" for more details.'`
 - You need to allow the execution of unverified scripts. Open Powershell as administrator, type `Set-ExecutionPolicy Unrestricted -Force` and press ENTER. Try running the script again. You can easily restore the security setting back by using `Set-ExecutionPolicy Undefined -Force`
-
-## Dependencies 
-- `Get-Duplicate` module, which is included.
 
 ## Background:
 - Most people create duplicate files within a specific folder either *accidentally*, or *forgetfully*, or *obliviously*
