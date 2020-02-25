@@ -80,15 +80,9 @@ Describe "Remove-DuplicateItem" {
         }
 
         It 'Throws exception when ExportDuplicates is invalid' {
-            $invalidExportDuplicates = -1
+            $invalidExportDuplicates = 0
 
-            { Remove-DuplicateItem -ExportDuplicates $invalidExportDuplicates -ErrorAction Stop } | Should -Throw
-        }
-
-        It 'Throws exception when ExportDuplicates is invalid' {
-            $invalidExportDuplicates = 2
-
-            { Remove-DuplicateItem -ExportDuplicates $invalidExportDuplicates -ErrorAction Stop } | Should -Throw
+            { Remove-DuplicateItem -ExportDuplicates:$invalidExportDuplicates -ErrorAction Stop } | Should -Throw
         }
 
         It 'Throws exception when ExportDuplicatesFileName is invalid' {
@@ -114,13 +108,7 @@ Describe "Remove-DuplicateItem" {
         It 'Throws exception when ExportTranscript is invalid' {
             $invalidExportTranscript = -1
 
-            { Remove-DuplicateItem -ExportTranscript $invalidExportTranscript -ErrorAction Stop } | Should -Throw
-        }
-
-        It 'Throws exception when ExportTranscript is invalid' {
-            $invalidExportTranscript = 2
-
-            { Remove-DuplicateItem -ExportTranscript $invalidExportTranscript -ErrorAction Stop } | Should -Throw
+            { Remove-DuplicateItem -ExportTranscript:$invalidExportTranscript -ErrorAction Stop } | Should -Throw
         }
 
         It 'Throws exception when ExportTranscriptFileNameName is invalid' {
@@ -174,10 +162,10 @@ Describe "Remove-DuplicateItem" {
 
         It 'Starts Transcript' {
             Mock Start-Transcript {}
-            $exportTranscript = 1
+            $exportTranscript = $true
 
             Push-Location $workDir
-            Remove-DuplicateItem -Path $parentDir -ExportTranscript $exportTranscript
+            Remove-DuplicateItem -Path $parentDir -ExportTranscript:$exportTranscript
             Pop-Location
 
             Assert-MockCalled Start-Transcript -Times 1
@@ -185,10 +173,10 @@ Describe "Remove-DuplicateItem" {
 
         It 'Stops Transcript' {
             Mock Stop-Transcript {}
-            $exportTranscript = 1
+            $exportTranscript = $true
 
             Push-Location $workDir
-            Remove-DuplicateItem -Path $parentDir -ExportTranscript $exportTranscript
+            Remove-DuplicateItem -Path $parentDir -ExportTranscript:$exportTranscript
             Pop-Location
 
             Assert-MockCalled Stop-Transcript -Times 1
@@ -221,9 +209,10 @@ Describe "Remove-DuplicateItem" {
 
         It 'Exports duplicate items to file' {
             Mock Export-DuplicateItems {}
+            $ExportDuplicates = $true
 
             Push-Location $workDir
-            Remove-DuplicateItem -Path $parentDir
+            Remove-DuplicateItem -Path $parentDir -ExportDuplicates:$ExportDuplicates
             Pop-Location
 
             Assert-MockCalled Export-DuplicateItems -Times 1

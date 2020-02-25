@@ -34,9 +34,6 @@ function Remove-DuplicateItem {
 
     .PARAMETER ExportDuplicates
     Whether to write the duplicates as .csv / .json file for review.
-    0 - Off
-    1 - On
-    Default: 1
 
     .PARAMETER ExportDuplicatesFileName
     File name of the duplicates export file. File will be created in current directory. Cannot contain the following characters: / \ : * ? < > |
@@ -46,9 +43,6 @@ function Remove-DuplicateItem {
 
     .PARAMETER ExportTranscript
     Whether to output a transcript of the console output
-    0 - Off
-    1 - On
-    Default: 1
 
     .PARAMETER ExportTranscriptFileName
     File name of the console transcript. File will be created in current directory.  File will be created in current directory. Cannot contain the following characters: / \ : * ? < > |
@@ -90,8 +84,7 @@ function Remove-DuplicateItem {
             [string]$DuplicateTempDirectoryName
         ,
             [ValidateNotNullOrEmpty()]
-            [ValidateRange(0,1)]
-            [int]$ExportDuplicates
+            [switch]$ExportDuplicates
         ,
             [ValidateScript({
                 if ( $_ -match '[\/\\\:\*\"\?\<\>\|]' ) {
@@ -105,8 +98,7 @@ function Remove-DuplicateItem {
             [string]$ExportDuplicatesFileName
         ,
             [ValidateNotNullOrEmpty()]
-            [ValidateRange(0,1)]
-            [int]$ExportTranscript
+            [switch]$ExportTranscript
         ,
             [ValidateScript({
                 if ( $_ -match '[\/\\\:\*\"\?\<\>\|]' ) {
@@ -132,16 +124,14 @@ function Remove-DuplicateItem {
             throw 'Mode 2 (Deleting to recycle bin) is only supported on Windows OS'
         }
         $DuplicateTempDirectoryName = if ($DuplicateTempDirectoryName) { $DuplicateTempDirectoryName } else { '!dup' }
-        $ExportDuplicates = if ($ExportDuplicates) { $ExportDuplicates } else { 1 }
         $ExportDuplicatesFileName = if ($ExportDuplicatesFileName) { $ExportDuplicatesFileName } else { 'duplicates.csv' }
-        $ExportTranscript = if ($ExportTranscript) { $ExportTranscript } else { 0 }
         $ExportTranscriptFileName = if ($ExportTranscriptFileName) { $ExportTranscriptFileName } else { 'transcript.log' }
         $DebugFlag = if ($DebugFlag) { $DebugFlag } else { 0 }
     }
     process {
         try {
             # Begin output transcript
-            if ($ExportTranscript -eq 1) {
+            if ($ExportTranscript) {
                 # Check for write permissions in script directory
                 # try {
                 #     [io.file]::OpenWrite((Join-Path $Path $ExportTranscriptFileName)).close()
@@ -202,13 +192,13 @@ function Remove-DuplicateItem {
             Handle-DuplicateItems -SearchObject $searchObj -Mode $Mode -DuplicateTempDirectoryName $DuplicateTempDirectoryName -DebugFlag $DebugFlag
 
             # Export duplicates .json or .csv
-            if ($ExportDuplicates -eq 1) {
+            if ($ExportDuplicates) {
                 $exportFilePath = Join-Path $PSScriptRoot $ExportDuplicatesFileName
-                Export-DuplicateItems -SearchObject $searchObj -ExportFilePath $exportFilePath -
+                Export-DuplicateItems -SearchObject $searchObj -ExportFilePath $exportFilePath
             }
 
             # Stop transcript
-            if ($ExportTranscript -eq 1) {
+            if ($ExportTranscript) {
                 Stop-Transcript
             }
         }catch {
