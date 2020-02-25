@@ -1,5 +1,4 @@
-*.csv
-*.txt
-*.json
-tests
-
+/.*
+!/.gitignore
+!/.gitattributes
+!/.travis.yml
