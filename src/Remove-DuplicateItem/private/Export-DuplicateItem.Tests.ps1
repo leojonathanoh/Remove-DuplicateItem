@@ -19,7 +19,7 @@ Describe "Export-DuplicateItem" {
                 md5 = 'xxxxxxx'
                 originalItem = $item
                 duplicateItems = @(
-                    $duplicateItem.FullName
+                    $duplicateItem
                 )
             }
         }
@@ -37,7 +37,7 @@ Describe "Export-DuplicateItem" {
             Pop-Location
 
             $result = Get-Item (Join-Path $workDir $exportDuplicatesFileName)
-            $result.Name | Should be 'foo.json'
+            $result.Name | Should -Be $exportDuplicatesFileName
         }
 
         It 'Exports duplicates to a .csv file in the current directory' {
@@ -48,7 +48,7 @@ Describe "Export-DuplicateItem" {
             Pop-Location
 
             $result = Get-Item (Join-Path $workDir $exportDuplicatesFileName)
-            $result.Name | Should be 'foo.csv'
+            $result.Name | Should -Be $exportDuplicatesFileName
         }
 
     }

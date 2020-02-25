@@ -56,10 +56,10 @@ Describe "Export-DuplicateItem" {
             Handle-DuplicateItem -SearchObject $searchObject
             Pop-Location
 
-            $result = Get-Item -Path $parentDir/file*
+            $result = @( Get-Item -Path $parentDir/file* )
             $result.Count | Should -Be 2
 
-            $result = Get-Item -Path $childDir/file*
+            $result = @( Get-Item -Path $childDir/file* )
             $result.Count | Should -Be 2
         }
 
@@ -101,10 +101,10 @@ Describe "Export-DuplicateItem" {
             Handle-DuplicateItem -SearchObject $searchObject -Mode $mode
             Pop-Location
 
-            $result = Get-Item -Path $parentDir/file*
+            $result = @( Get-Item -Path $parentDir/file* )
             $result.Count | Should -Be 1
 
-            $result = Get-Item -Path $childDir/file*
+            $result = @( Get-Item -Path $childDir/file* )
             $result.Count | Should -Be 1
         }
         It 'Deletes duplicate items permanently (acrossFolder)' {
@@ -140,10 +140,10 @@ Describe "Export-DuplicateItem" {
             Handle-DuplicateItem -SearchObject $searchObject -Mode $mode
             Pop-Location
 
-            $result = Get-Item -Path $parentDir/file*
+            $result = @( Get-Item -Path $parentDir/file* )
             $result.Count | Should -Be 1
 
-            $result = Get-Item -Path $childDir/file*
+            $result = @( Get-Item -Path $childDir/file* )
             $result.Count | Should -Be 0
         }
 
@@ -181,10 +181,10 @@ Describe "Export-DuplicateItem" {
             Handle-DuplicateItem -SearchObject $searchObject -Mode $mode -DebugFlag $debugFlag
             Pop-Location
 
-            $result = Get-Item -Path $parentDir/file*
+            $result = @( Get-Item -Path $parentDir/file* )
             $result.Count | Should -Be 2
 
-            $result = Get-Item -Path $childDir/file*
+            $result = @( Get-Item -Path $childDir/file* )
             $result.Count | Should -Be 2
         }
     }
@@ -223,7 +223,7 @@ Describe "Export-DuplicateItem" {
         Handle-DuplicateItem -SearchObject $searchObject -Mode $mode -DuplicateTempDirectoryName $duplicateTempDirectoryName
         Pop-Location
 
-        $result = Get-Item -Path $parentDir/$duplicateTempDirectoryName/file*
+        $result = @( Get-Item -Path $parentDir/$duplicateTempDirectoryName/file* )
         $result.Count | Should -Be 2
 
         Remove-Item -Path $parentDir/$duplicateTempDirectoryName -Force -Recurse
@@ -268,10 +268,10 @@ Describe "Export-DuplicateItem" {
         Handle-DuplicateItem -SearchObject $searchObject -Mode $mode -DuplicateTempDirectoryName $duplicateTempDirectoryName
         Pop-Location
 
-        $result = Get-Item -Path $parentDir/$duplicateTempDirectoryName/file*
+        $result = @( Get-Item -Path $parentDir/$duplicateTempDirectoryName/file* )
         $result.Count | Should -Be 1
 
-        $result = Get-Item -Path $childDir/$duplicateTempDirectoryName/file*
+        $result = @( Get-Item -Path $childDir/$duplicateTempDirectoryName/file* )
         $result.Count | Should -Be 1
     }
 
