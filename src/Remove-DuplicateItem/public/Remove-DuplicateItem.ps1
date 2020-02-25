@@ -199,12 +199,12 @@ function Remove-DuplicateItem {
             }
 
             # Performs actions on duplicate items
-            Handle-DuplicateItems -SearchObject $searchObj -Mode $Mode
+            Handle-DuplicateItems -SearchObject $searchObj -Mode $Mode -DuplicateTempDirectoryName $DuplicateTempDirectoryName -DebugFlag $DebugFlag
 
             # Export duplicates .json or .csv
             if ($ExportDuplicates -eq 1) {
                 $exportFilePath = Join-Path $PSScriptRoot $ExportDuplicatesFileName
-                Export-DuplicateItems -SearchObject $searchObj -ExportFilePath $exportFilePath
+                Export-DuplicateItems -SearchObject $searchObj -ExportFilePath $exportFilePath -
             }
 
             # Stop transcript
