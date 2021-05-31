@@ -1,5 +1,9 @@
 # Remove-Duplicates
 
+[![github-actions](https://github.com/leojonathanoh/Remove-DuplicateItem/workflows/ci-master-pr/badge.svg)](https://github.com/leojonathanoh/Remove-DuplicateItem/actions)
+[![github-release](https://img.shields.io/github/v/release/leojonathanoh/Remove-DuplicateItem?style=flat-square)](https://github.com/leojonathanoh/Remove-DuplicateItem/releases/)
+[![powershell-gallery-release](https://img.shields.io/powershellgallery/v/Remove-DuplicateItem?logo=powershell&logoColor=white&label=PSGallery&labelColor=&style=flat-square)](https://www.powershellgallery.com/packages/Remove-DuplicateItem/)
+
 Removes duplicate files from a given folder on Windows / *nix systems.
 
 ## Deprecation
