@@ -1,6 +1,7 @@
 /.*
 !/.github
 !/.gitignore
+!/.gitmodules
 !/.gitattributes
 !/.travis.yml
 !/.vscode
