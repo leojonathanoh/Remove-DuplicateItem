@@ -4,6 +4,8 @@ $sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path) -replace '\.Tests\.', '.'
 
 Describe "Remove-DuplicateItem" -Tag 'Unit' {
 
+    function Start-Transcript {}
+    function Import-Module {}
     function New-SearchObject {
         [CmdletBinding()]
         [OutputType([hashtable])]
@@ -19,10 +21,11 @@ Describe "Remove-DuplicateItem" -Tag 'Unit' {
             duplicateItemsCount = 0
         }
     }
-
+    function Get-DuplicateItem {
+        @{}
+    }
     function Handle-DuplicateItems {}
     function Export-DuplicateItems {}
-    function Start-Transcript {}
     function Stop-Transcript {}
 
     Context 'Non-terminating errors' {
@@ -155,10 +158,13 @@ Describe "Remove-DuplicateItem" -Tag 'Unit' {
     }
 
     Context 'Transcript' {
+
         $workDir = "TestDrive:\work"
 
         $parentDir = "$workDir\parent"
         New-Item $parentDir -ItemType Directory -Force > $null
+
+
 
         It 'Starts Transcript' {
             Mock Start-Transcript {}
@@ -189,13 +195,13 @@ Describe "Remove-DuplicateItem" -Tag 'Unit' {
 
         $parentDir = "$workDir\parent"
         New-Item $parentDir -ItemType Directory -Force > $null
-        'foo'           | Out-File -Path "$parentDir\file1"  -Encoding utf8 -Force
-        'foo'           | Out-File -Path "$parentDir\file2" -Encoding utf8 -Force
+        'foo'           | Out-File "$parentDir\file1"  -Encoding utf8 -Force
+        'foo'           | Out-File "$parentDir\file2" -Encoding utf8 -Force
 
         $childDir = "$parentDir\child"
         New-Item $childDir -ItemType Directory -Force > $null
-        'foo'           | Out-File -Path "$childDir\file1"  -Encoding utf8 -Force
-        'foo'           | Out-File -Path "$childDir\file2" -Encoding utf8 -Force
+        'foo'           | Out-File "$childDir\file1"  -Encoding utf8 -Force
+        'foo'           | Out-File "$childDir\file2" -Encoding utf8 -Force
 
         It 'Handles duplicate items' {
             Mock Handle-DuplicateItems {}

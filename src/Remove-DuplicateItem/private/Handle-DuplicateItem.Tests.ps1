@@ -23,7 +23,7 @@ Describe "Export-DuplicateItem" -Tag 'Unit' {
             New-Item $parentDir -ItemType Directory -Force > $null
             New-Item $childDir -ItemType Directory -Force > $null
             $itemPath, $duplicateItemPaths, $childItemPath, $duplicateChildItemPath | % {
-                'foo'           | Out-File -Path "$_"  -Encoding utf8 -Force
+                'foo'           | Out-File "$_"  -Encoding utf8 -Force
             }
 
             $originalItem = Get-Item $itemPath
@@ -67,7 +67,7 @@ Describe "Export-DuplicateItem" -Tag 'Unit' {
             New-Item $parentDir -ItemType Directory -Force > $null
             New-Item $childDir -ItemType Directory -Force > $null
             $itemPath, $duplicateItemPaths, $childItemPath, $duplicateChildItemPath | % {
-                'foo'           | Out-File -Path "$_"  -Encoding utf8 -Force
+                'foo'           | Out-File "$_"  -Encoding utf8 -Force
             }
 
             $originalItem = Get-Item $itemPath
@@ -111,7 +111,7 @@ Describe "Export-DuplicateItem" -Tag 'Unit' {
             New-Item $parentDir -ItemType Directory -Force > $null
             New-Item $childDir -ItemType Directory -Force > $null
             $itemPath, $duplicateItemPaths, $childItemPath, $duplicateChildItemPath | % {
-                'foo'           | Out-File -Path "$_"  -Encoding utf8 -Force
+                'foo'           | Out-File "$_"  -Encoding utf8 -Force
             }
 
             $originalItem = Get-Item $itemPath
@@ -151,7 +151,7 @@ Describe "Export-DuplicateItem" -Tag 'Unit' {
             New-Item $parentDir -ItemType Directory -Force > $null
             New-Item $childDir -ItemType Directory -Force > $null
             $itemPath, $duplicateItemPaths, $childItemPath, $duplicateChildItemPath | % {
-                'foo'           | Out-File -Path "$_"  -Encoding utf8 -Force
+                'foo'           | Out-File "$_"  -Encoding utf8 -Force
             }
 
             $originalItem = Get-Item $itemPath
@@ -193,7 +193,7 @@ Describe "Export-DuplicateItem" -Tag 'Unit' {
         New-Item $parentDir -ItemType Directory -Force > $null
         New-Item $childDir -ItemType Directory -Force > $null
         $itemPath, $duplicateItemPaths, $childItemPath, $duplicateChildItemPath | % {
-            'foo'           | Out-File -Path "$_"  -Encoding utf8 -Force
+            'foo'           | Out-File "$_"  -Encoding utf8 -Force
         }
 
         $originalItem = Get-Item $itemPath
@@ -233,7 +233,7 @@ Describe "Export-DuplicateItem" -Tag 'Unit' {
         New-Item $parentDir -ItemType Directory -Force > $null
         New-Item $childDir -ItemType Directory -Force > $null
         $itemPath, $duplicateItemPaths, $childItemPath, $duplicateChildItemPath | % {
-            'foo'           | Out-File -Path "$_"  -Encoding utf8 -Force
+            'foo'           | Out-File "$_"  -Encoding utf8 -Force
         }
 
         $originalItem = Get-Item $itemPath
