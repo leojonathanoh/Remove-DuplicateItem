@@ -15,7 +15,6 @@ It is simpler to use [`Get-DuplicateItem`](https://github.com/theohbrothers/Get-
 ## Install
 
 ```powershell
-Install-Module Get-DuplicateItem -Repository PSGallery -Scope CurrentUser -Verbose
 Install-Module Remove-DuplicateItem -Repository PSGallery -Scope CurrentUser -Verbose
 ```
 
