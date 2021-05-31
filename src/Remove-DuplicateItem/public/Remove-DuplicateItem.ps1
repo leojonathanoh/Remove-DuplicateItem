@@ -166,7 +166,7 @@ function Remove-DuplicateItem {
                     Path = $container.FullName
                     Recurse = if ($scope -eq 'acrossFolder') { $true } else { $false }
                     AsHashtable = $true
-                    ExcludeDirectory = $DuplicateTempDirectoryName
+                    Exclude = $DuplicateTempDirectoryName
                 }
                 $results = Get-DuplicateItem @params
 
