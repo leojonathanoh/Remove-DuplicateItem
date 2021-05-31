@@ -2,40 +2,20 @@
 
 Removes duplicate files from a given folder on Windows / *nix systems.
 
-The file search scope may be **within-folder** or **across-folder**.
+## Deprecation
 
-Option to perform if duplicates are found:
+This project is deprecated.
 
-0. List duplicates
-1. Delete duplicates permanently, leaving the original file intact
-2. Delete duplicates to the recycle bin, leaving the original file intact (only for Windows)
-3. Move duplicates to a newly created folder within the folder where duplicates exist, leaving the original file intact
-
-Option to export all duplicates to a `.json`, or `.csv` file for later review.
-
-Option to export the entire console session (`output.txt`) to the script's directory for later review.
-
-## Prerequisites
-
-- Powershell v3
-- `Windows` / `*nix` environment
-- Write permissions on the `$pwd` to write any export files
-
-## Dependencies
-
-- [`Get-DuplicateItem`](https://github.com/leojonathanoh/Get-DuplicateItem) module. Install it first:
-
-```powershell
-Install-Module Get-DuplicateItem -Repository PSGallery -Scope CurrentUser -Verbose
-```
+It is simpler to use [`Get-DuplicateItem`](https://github.com/theohbrothers/Get-DuplicateItem) to get duplicates, and remove them by `Remove-Item`.
 
 ## Install
 
 ```powershell
+Install-Module Get-DuplicateItem -Repository PSGallery -Scope CurrentUser -Verbose
 Install-Module Remove-DuplicateItem -Repository PSGallery -Scope CurrentUser -Verbose
 ```
 
-## Example
+## Usage
 
 ```powershell
 # List
@@ -73,3 +53,5 @@ Most people create duplicate files within a specific folder either *accidentally
 - Accidentally: For instance, you create a file, and accidentally press Ctrl-C and Ctrl-V in the wrong place - a possible scenario, in explorer while highlighting on a file or a bunch of files, until you notice a bunch of copied files with appended '-Copy' or '- Copy 1' or '1 - Copy - Copy (1)'.
 - Forgetfully: You are working on a .doc, saving it once. Then a minute later you forgot you saved it, and save it again in another name. Now you have two identical files in a certain folder.
 - Obliviously: You restore files from Onedrive Web App (e.g. onedrive.com). Then later the same file from Recycle bin. You now have a duplicate in the same folder probably with suffix 'Copy 1' or some sort.
+
+
